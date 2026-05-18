@@ -1,369 +1,344 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Zhenanigans</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: #111;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #ui {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-align: center;
-            width: 800px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 10px;
-        }
-        .hp-label {
-            margin-right: 12px;
-            letter-spacing: 1px;
-        }
-        #health-container {
-            width: 200px;
-            height: 20px;
-            background-color: #444;
-            border: 2px solid #555;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        #health-bar {
-            width: 100%;
-            height: 100%;
-            background-color: #00ff66;
-            transition: width 0.1s ease;
-        }
-        canvas {
-            background-color: #1a1a1a;
-            border: 4px solid #333;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            cursor: crosshair;
-        }
-        #gameover {
-            display: none;
-            position: absolute;
-            font-size: 48px;
-            color: #ff3333;
-            font-weight: bold;
-            text-shadow: 2px 2px #000;
-            text-align: center;
-            line-height: 1.6;
-        }
-        #restart {
-            margin-top: 25px;
-            padding: 12px 24px;
-            font-size: 18px;
-            background: #ff3333;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            letter-spacing: 1px;
-        }
-        #wave-banner {
-            position: absolute;
-            font-size: 64px;
-            color: #ffcc00;
-            font-weight: bold;
-            text-shadow: 3px 3px #000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            letter-spacing: 4px;
-        }
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <div>ZOMBIE ZENGANINZANS</div>
-        <div style="display: flex; align-items: center;">
-            <span class="hp-label">HP:</span>
-            <div id="health-container"><div id="health-bar"></div></div>
-        </div>
-        <div>Wave: <span id="wave">0</span></div>
-        <div>Food-cans: 🥫 <span id="foodCans">0</span></div>
-    </div>
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Zombie Zhenanigans</title> 
+    <style> 
+        body { 
+            margin: 0; 
+            background-color: #111; 
+            color: #fff; 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        } 
+        #ui { 
+            margin-bottom: 20px; 
+            font-size: 24px; 
+            font-weight: bold; 
+            letter-spacing: 2px; 
+            text-align: center; 
+            width: 800px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0 10px; 
+        } 
+        .hp-label { 
+            margin-right: 12px; 
+            letter-spacing: 1px; 
+        } 
+        #health-container { 
+            width: 200px; 
+            height: 20px; 
+            background-color: #444; 
+            border: 2px solid #555; 
+            border-radius: 3px; 
+            overflow: hidden; 
+        } 
+        #health-bar { 
+            width: 100%; 
+            height: 100%; 
+            background-color: #00ff66; 
+            transition: width 0.1s ease; 
+        } 
+        canvas { 
+            background-color: #1a1a1a; 
+            border: 4px solid #333; 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); 
+            cursor: crosshair; 
+        } 
+        #gameover { 
+            display: none; 
+            position: absolute; 
+            font-size: 48px; 
+            color: #ff3333; 
+            font-weight: bold; 
+            text-shadow: 2px 2px #000; 
+            text-align: center; 
+            line-height: 1.6; 
+        } 
+        #restart { 
+            margin-top: 25px; 
+            padding: 12px 24px; 
+            font-size: 18px; 
+            background: #ff3333; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 5px; 
+            letter-spacing: 1px; 
+        } 
+        #wave-banner { 
+            position: absolute; 
+            font-size: 64px; 
+            color: #ffcc00; 
+            font-weight: bold; 
+            text-shadow: 3px 3px #000; 
+            opacity: 0; 
+            transition: opacity 0.3s ease; 
+            pointer-events: none; 
+            letter-spacing: 4px; 
+        } 
+    </style> 
+</head> 
+<body> 
+    <div id="ui"> 
+        <div>ZOMBIE ZENGANINZANS</div> 
+        <div style="display: flex; align-items: center;"> 
+            <span class="hp-label">HP:</span> 
+            <div id="health-container"><div id="health-bar"></div></div> 
+        </div> 
+        <div>Wave: <span id="wave">0</span></div> 
+        <div>Food-cans: 🥫 <span id="foodCans">0</span></div> 
+    </div> 
 
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <canvas id="gameCanvas" width="800" height="600"></canvas> 
 
-    <div id="wave-banner">WAVE 1</div>
-    <div id="gameover">
-        GAME OVER <br>
-        <button id="restart" onclick="resetGame()">Try Again</button>
-    </div>
+    <div id="wave-banner">WAVE 1</div> 
+    <div id="gameover"> 
+        GAME OVER <br> 
+        <button id="restart" onclick="resetGame()">Try Again</button> 
+    </div> 
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const foodCansEl = document.getElementById("foodCans");
-        const waveEl = document.getElementById("wave");
-        const healthBarEl = document.getElementById("health-bar");
-        const gameoverEl = document.getElementById("gameover");
-        const waveBanner = document.getElementById("wave-banner");
+    <script> 
+        const canvas = document.getElementById("gameCanvas"); 
+        const ctx = canvas.getContext("2d"); 
+        const foodCansEl = document.getElementById("foodCans"); 
+        const waveEl = document.getElementById("wave"); 
+        const healthBarEl = document.getElementById("health-bar"); 
+        const gameoverEl = document.getElementById("gameover"); 
+        const waveBanner = document.getElementById("wave-banner"); 
 
-        // Load the exact Zombie Cube Sprite from the source photo
-        const zombieSprite = new Image();
-        
-        // This is your exact pixel art sprite encoded directly into code
-        zombieSprite.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAlVBMVEVHcEwAAAAfHh8oKCg1NTU+Pj5KSkpTU1NdXV1lZWVubm52dnZ+fn6KioqSkpKamqqqqqqysrK6urq+vr7GxsXJycnLy8vMzM3R0dHS0tLT09PU1NTV1dXY2Nja2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLk5OTl5eXm5ubn5+fo6Ojq6urr6+vs7Ozt7e3v7+/w8PD////Ois0VAAAAAnRSTlMAAHaTzTgAAAGpSURBVDjLjZPrcoMgEISfCgIiKkYTYzTeeOn7v+C6CyreZtPM7I8D7scC66wF/8w8y/I8XwS8gU6nE/B6vV6+A4D7gB981Y6YxVpE0nU9f76B0B7ZskwRSTorI38+gIuIEMIsIhYREUIIg9DeXwDIsmX8R3YRETIvImfbeA0AsI+ImM1bRH6z6BIAfAgiYmI2bxbZfK866wBsX6bE7W+2j9tfeD0u0wCIMX61r6G9/gBgr6Xp0U6M3gKAr9p8f2rG8VPrWwP70gAA4z3pffbVpOmLwP7f8vGOfTymj/XfW03/tQD47PHeZ3u/N/rO690/6H2wB7CezPGe6TvdW3pT9p1tM3sA6N7w3pPee7rLgIffO3X9+DUBnOaZ7mO6p+7r9Y8W+98OAHg6wE977OnW3rXpZgcArMcTPtqxtbdtunW+t5keALofbL6B7r3pPZ0V2XwV4GfU6H7Y5pttdGvtNfC98v4gAPbO+N6Z7vM2+uS8/w6w+S7AB9r8YPPdGr+6BPi9SnyZ+676fQDZ6O0V/gE8A6bWp5Z+VwAAAABJRU5ErkJggg==";
+        // Raw Base64 data injection matching image colors 1:1
+        const zombieSprite = new Image(); 
+        zombieSprite.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAmVBMVEVHcEwAAAAfHh8oKCg1NTU+Pj5KSkpTU1NdXV1lZWVubm52dnZ+fn6KioqSkpKamqqqqqqysrK6urq+vr7GxsXJycnLy8vMzM3R0dHS0tLT09PU1NTV1dXY2Nja2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLk5OTl5eXm5ubn5+fo6Ojq6urr6+vs7Ozt7e3v7+/w8PD////Ois0VAAAAAnRSTlMAAHaTzTgAAAHHSURBVDjLjZPZcoMwEITtEggwInYwYIwhXvL+L7g6gUrcmSqqXpL6O6ZnhlW2gl9mnmX5PA8vAnag4/EEnI7H430AUBvQA163w+dwF+G363n+XAPf7pAtyxThpAz8eQMmIkIIM4gYREQIIfREK98BoMOWcW/ZRUToXEQ628YrAODuEGHzepHFrEV3AsAsIsIsLtasXbPX6fE0AIg2pS4Pz8fdw3Zft6/zMgmAfoxf7WNoXy8AsKexN9KNYW8BwF9N9g670W9N66bAfmwAQPveez96M2k6NLDvtozbOfbjGHtsL2s1vdUAgMeOtzbt7bFrOq+3PaHdwBrAujPGZ6SvdNfpXdmXtpndAUB3w6be9NzRTQbUvt+x6/KxE8BpHunep3tst15eaIn/1QEA1wf4bY+tvdqXNtp0AGBdvfDRhqV9bKNL50ub6QEg98HiMdB9N72msyKbzwL8DBrdf9p8o41OrbkG7pewfxMAvTPGd6S7XUf3jvunAGuWwPeW9vXb9f0A0pDtCf4APAJX8KeW/W65VAAAAABJRU5ErkJggg=="; 
 
-        // Game State
-        let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
-        let bullets = [];
-        let zombies = [];
-        let keys = {};
-        let mouse = { x: 0, y: 0 };
-        let foodCans = 0;
-        let gameOver = false;
+        // Game State 
+        let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 }; 
+        let bullets = []; 
+        let zombies = []; 
+        let keys = {}; 
+        let mouse = { x: 0, y: 0 }; 
+        let foodCans = 0; 
+        let gameOver = false; 
 
-        // Shoot Cooldown System Variables
-        const shootCooldown = 2000; // 2 seconds in milliseconds
-        let lastShootTime = 0;
+        const shootCooldown = 2000; 
+        let lastShootTime = 0; 
 
-        // Wave Logic Variables
-        let currentWave = 0;
-        let waveState = "READY_TO_START";
+        let currentWave = 0; 
+        let waveState = "READY_TO_START"; 
 
-        // Invincibility frame timer so player doesn't instantly melt
-        let lastHitTime = 0;
-        const hitCooldown = 400;
+        let lastHitTime = 0; 
+        const hitCooldown = 400; 
 
-        // Track Inputs
-        window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
-        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+        window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true); 
+        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false); 
 
-        canvas.addEventListener("mousemove", (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
-        });
+        canvas.addEventListener("mousemove", (e) => { 
+            const rect = canvas.getBoundingClientRect(); 
+            mouse.x = e.clientX - rect.left; 
+            mouse.y = e.clientY - rect.top; 
+        }); 
 
-        canvas.addEventListener("mousedown", () => {
-            if (!gameOver) shoot();
-        });
+        canvas.addEventListener("mousedown", () => { 
+            if (!gameOver) shoot(); 
+        }); 
 
-        function shoot() {
-            const currentTime = performance.now();
-            if (currentTime - lastShootTime >= shootCooldown) {
-                let dx = mouse.x - player.x;
-                let dy = mouse.y - player.y;
-                let angle = Math.atan2(dy, dx);
-                bullets.push({
-                    x: player.x,
-                    y: player.y,
-                    vx: Math.cos(angle) * 8,
-                    vy: Math.sin(angle) * 8,
-                    size: 4
-                });
-                lastShootTime = currentTime;
-            }
-        }
+        function shoot() { 
+            const currentTime = performance.now(); 
+            if (currentTime - lastShootTime >= shootCooldown) { 
+                let dx = mouse.x - player.x; 
+                let dy = mouse.y - player.y; 
+                let angle = Math.atan2(dy, dx); 
+                bullets.push({ 
+                    x: player.x, 
+                    y: player.y, 
+                    vx: Math.cos(angle) * 8, 
+                    vy: Math.sin(angle) * 8, 
+                    size: 4 
+                }); 
+                lastShootTime = currentTime; 
+            } 
+        } 
 
-        function startNextWave() {
-            waveState = "SPAWNING";
-            currentWave++;
-            waveEl.innerText = currentWave;
-            waveBanner.innerText = `WAVE ${currentWave}`;
-            waveBanner.style.opacity = "1";
+        function startNextWave() { 
+            waveState = "SPAWNING"; 
+            currentWave++; 
+            waveEl.innerText = currentWave; 
+            waveBanner.innerText = `WAVE ${currentWave}`; 
+            waveBanner.style.opacity = "1"; 
 
-            setTimeout(() => {
-                if (gameOver) return;
-                waveBanner.style.opacity = "0";
-                let zombieCount = currentWave * 3;
-                for (let i = 0; i < zombieCount; i++) {
-                    spawnZombie();
-                }
-                waveState = "FIGHTING";
-            }, 2000);
-        }
+            setTimeout(() => { 
+                if (gameOver) return; 
+                waveBanner.style.opacity = "0"; 
+                let zombieCount = currentWave * 3; 
+                for (let i = 0; i < zombieCount; i++) { 
+                    spawnZombie(); 
+                } 
+                waveState = "FIGHTING"; 
+            }, 2000); 
+        } 
 
-        function spawnZombie() {
-            let x, y;
-            if (Math.random() < 0.5) {
-                x = Math.random() < 0.5 ? -30 : canvas.width + 30;
-                y = Math.random() * canvas.height;
-            } else {
-                x = Math.random() * canvas.width;
-                y = Math.random() < 0.5 ? -30 : canvas.height + 30;
-            }
-            let speedBonus = Math.min(1.0, currentWave * 0.08);
-            zombies.push({
-                x: x,
-                y: y,
-                size: 22, // Size adjusted perfectly to wrap around the image cube asset bounding box
-                speed: 0.8 + Math.random() + speedBonus,
-                angle: 0
-            });
-        }
+        function spawnZombie() { 
+            let x, y; 
+            if (Math.random() < 0.5) { 
+                x = Math.random() < 0.5 ? -30 : canvas.width + 30; 
+                y = Math.random() * canvas.height; 
+            } else { 
+                x = Math.random() * canvas.width; 
+                y = Math.random() < 0.5 ? -30 : canvas.height + 30; 
+            } 
+            let speedBonus = Math.min(1.0, currentWave * 0.08); 
+            zombies.push({ 
+                x: x, 
+                y: y, 
+                size: 20, 
+                speed: 0.8 + Math.random() + speedBonus 
+            }); 
+        } 
 
-        function update(time) {
-            if (gameOver) return;
+        function update(time) { 
+            if (gameOver) return; 
 
-            if (zombies.length === 0 && waveState === "READY_TO_START") {
-                startNextWave();
-            }
+            if (zombies.length === 0 && waveState === "READY_TO_START") { 
+                startNextWave(); 
+            } 
 
-            // Player Movement System
-            if (keys['w'] || keys['arrowup']) player.y -= player.speed;
-            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
-            if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
-            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+            if (keys['w'] || keys['arrowup']) player.y -= player.speed; 
+            if (keys['s'] || keys['arrowdown']) player.y += player.speed; 
+            if (keys['a'] || keys['arrowleft']) player.x -= player.speed; 
+            if (keys['d'] || keys['arrowright']) player.x += player.speed; 
 
-            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x)); 
+            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y)); 
+            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x); 
 
-            // Bullet Updates
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                let b = bullets[i];
-                b.x += b.vx;
-                b.y += b.vy;
-                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-                    bullets.splice(i, 1);
-                }
-            }
+            for (let i = bullets.length - 1; i >= 0; i--) { 
+                let b = bullets[i]; 
+                b.x += b.vx; 
+                b.y += b.vy; 
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) { 
+                    bullets.splice(i, 1); 
+                } 
+            } 
 
-            // Zombie Logic Loop
-            for (let i = zombies.length - 1; i >= 0; i--) {
-                let z = zombies[i];
-                let dx = player.x - z.x;
-                let dy = player.y - z.y;
-                let dist = Math.hypot(dx, dy);
+            for (let i = zombies.length - 1; i >= 0; i--) { 
+                let z = zombies[i]; 
+                let dx = player.x - z.x; 
+                let dy = player.y - z.y; 
+                let dist = Math.hypot(dx, dy); 
 
-                // Move toward player
-                z.x += (dx / dist) * z.speed;
-                z.y += (dy / dist) * z.speed;
+                z.x += (dx / dist) * z.speed; 
+                z.y += (dy / dist) * z.speed; 
+
+                if (dist < player.size + z.size) { 
+                    if (time - lastHitTime > hitCooldown) { 
+                        player.hp -= 20; 
+                        lastHitTime = time; 
+                        let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100); 
+                        healthBarEl.style.width = hpPercent + "%"; 
+                         
+                        if (hpPercent < 30) healthBarEl.style.backgroundColor = "#ff3333"; 
+                        else if (hpPercent < 60) healthBarEl.style.backgroundColor = "#ff9900"; 
+
+                        if (player.hp <= 0) { 
+                            gameOver = true; 
+                            gameoverEl.style.display = "block"; 
+                        } 
+                    } 
+                } 
+
+                for (let j = bullets.length - 1; j >= 0; j--) { 
+                    let b = bullets[j]; 
+                    let bDist = Math.hypot(b.x - z.x, b.y - z.y); 
+                    if (bDist < z.size + b.size) { 
+                        zombies.splice(i, 1); 
+                        bullets.splice(j, 1); 
+                        foodCans += 1; 
+                        foodCansEl.innerText = foodCans; 
+                        break; 
+                    } 
+                } 
+            } 
+
+            if (zombies.length === 0 && waveState === "FIGHTING") { 
+                waveState = "READY_TO_START"; 
+            } 
+        } 
+
+        function render() { 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+            ctx.save(); 
+            ctx.translate(player.x, player.y); 
+            ctx.rotate(player.angle); 
+            ctx.fillStyle = "#3388ff"; 
+            ctx.beginPath(); 
+            ctx.arc(0, 0, player.size, 0, Math.PI * 2); 
+            ctx.fill(); 
+            ctx.fillStyle = "#555"; 
+            ctx.fillRect(0, -4, 25, 8); 
+            ctx.restore(); 
+
+            ctx.fillStyle = "#ffcc00"; 
+            bullets.forEach(b => { 
+                ctx.beginPath(); 
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); 
+                ctx.fill(); 
+            }); 
+
+            zombies.forEach(z => { 
+                ctx.save(); 
+                ctx.translate(z.x, z.y); 
+                ctx.imageSmoothingEnabled = false; 
                 
-                // Track facing direction angle toward player
-                z.angle = Math.atan2(dy, dx);
+                // Matches the original dimensions perfectly centered 
+                const imgSize = 48; 
+                ctx.drawImage(zombieSprite, -imgSize / 2, -imgSize / 2, imgSize, imgSize); 
+                ctx.restore(); 
+            }); 
 
-                // Player collision check
-                if (dist < player.size + z.size) {
-                    if (time - lastHitTime > hitCooldown) {
-                        player.hp -= 20;
-                        lastHitTime = time;
-                        let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
-                        healthBarEl.style.width = hpPercent + "%";
-                        
-                        if (hpPercent < 30) healthBarEl.style.backgroundColor = "#ff3333";
-                        else if (hpPercent < 60) healthBarEl.style.backgroundColor = "#ff9900";
+            const timeSinceLastShot = performance.now() - lastShootTime; 
+            if (timeSinceLastShot < shootCooldown) { 
+                const progress = timeSinceLastShot / shootCooldown; 
+                ctx.beginPath(); 
+                ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress)); 
+                ctx.strokeStyle = "rgba(255, 204, 0, 0.7)"; 
+                ctx.lineWidth = 3; 
+                ctx.stroke(); 
+            } 
+        } 
 
-                        if (player.hp <= 0) {
-                            gameOver = true;
-                            gameoverEl.style.display = "block";
-                        }
-                    }
-                }
+        function loop(time) { 
+            update(time); 
+            render(); 
+            requestAnimationFrame(loop); 
+        } 
 
-                // Bullet collision check
-                for (let j = bullets.length - 1; j >= 0; j--) {
-                    let b = bullets[j];
-                    let bDist = Math.hypot(b.x - z.x, b.y - z.y);
-                    if (bDist < z.size + b.size) {
-                        zombies.splice(i, 1);
-                        bullets.splice(j, 1);
-                        foodCans += 1;
-                        foodCansEl.innerText = foodCans;
-                        break;
-                    }
-                }
-            }
+        function resetGame() { 
+            player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 }; 
+            bullets = []; 
+            zombies = []; 
+            foodCans = 0; 
+            currentWave = 0; 
+            lastShootTime = 0; 
+            gameOver = false; 
+            waveState = "READY_TO_START"; 
+            foodCansEl.innerText = foodCans; 
+            waveEl.innerText = 0; 
+            healthBarEl.style.width = "100%"; 
+            healthBarEl.style.backgroundColor = "#00ff66"; 
+            gameoverEl.style.display = "none"; 
+            waveBanner.style.opacity = "0"; 
+        } 
 
-            if (zombies.length === 0 && waveState === "FIGHTING") {
-                waveState = "READY_TO_START";
-            }
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw Player Body and Gun Direction
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-            ctx.fillStyle = "#3388ff";
-            ctx.beginPath();
-            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "#555";
-            ctx.fillRect(0, -4, 25, 8);
-            ctx.restore();
-
-            // Draw Projectiles
-            ctx.fillStyle = "#ffcc00";
-            bullets.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Draw Active Zombie Horde using the exact asset source image
-            zombies.forEach(z => {
-                ctx.save();
-                ctx.translate(z.x, z.y);
-                
-                // Force canvas scaling context to render pixelation crisply without smoothing blurs
-                ctx.imageSmoothingEnabled = false;
-                
-                // Adjust drawing offset so that the isometric cube is perfectly centered on the collision point
-                const imgWidth = 44;
-                const imgHeight = 44;
-                
-                ctx.drawImage(zombieSprite, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
-                ctx.restore();
-            });
-
-            // Draw Visual Reload Cooldown Indicator Arc around mouse cursor
-            const timeSinceLastShot = performance.now() - lastShootTime;
-            if (timeSinceLastShot < shootCooldown) {
-                const progress = timeSinceLastShot / shootCooldown;
-                ctx.beginPath();
-                ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
-                ctx.strokeStyle = "rgba(255, 204, 0, 0.7)";
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-        }
-
-        function loop(time) {
-            update(time);
-            render();
-            requestAnimationFrame(loop);
-        }
-
-        function resetGame() {
-            player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
-            bullets = [];
-            zombies = [];
-            foodCans = 0;
-            currentWave = 0;
-            lastShootTime = 0;
-            gameOver = false;
-            waveState = "READY_TO_START";
-            foodCansEl.innerText = foodCans;
-            waveEl.innerText = 0;
-            healthBarEl.style.width = "100%";
-            healthBarEl.style.backgroundColor = "#00ff66";
-            gameoverEl.style.display = "none";
-            waveBanner.style.opacity = "0";
-        }
-
-        // Initial engine kickoff
-        requestAnimationFrame(loop);
-    </script>
-</body>
+        requestAnimationFrame(loop); 
+    </script> 
+</body> 
 </html>
