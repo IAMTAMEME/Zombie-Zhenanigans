@@ -136,32 +136,32 @@
         let lastHitTime = 0;
         const hitCooldown = 400;
 
-        // Programmatic 16x16 Pixel Art Grid for the Zombie Cube
-        // 0 = Transparent, 1 = Dark Green Body, 2 = Light Green Highlights, 3 = Red Eyes, 4 = Dark Shading
+        // 16x16 Pixel Art Matrix Map for the Zombie Cube
+        // 0 = Transparent, 1 = Dark Green, 2 = Light Green, 3 = Red Eyes, 4 = Shadow Border/Mouth
         const zombieCubeGrid = [
-            [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
-            [0,1,2,2,2,2,2,2,2,2,2,2,2,4,1,0],
-            [1,2,2,2,2,2,2,2,2,2,2,2,2,4,4,1],
-            [1,2,2,1,1,2,2,2,2,1,1,2,2,4,4,1],
-            [1,2,3,3,3,1,2,2,1,3,3,3,2,4,4,1],
-            [1,2,3,3,3,1,2,2,1,3,3,3,2,4,4,1],
-            [1,2,1,1,1,2,2,2,2,1,1,1,2,4,4,1],
-            [1,2,2,2,2,2,4,4,2,2,2,2,2,4,4,1],
-            [1,2,2,2,2,4,1,1,4,2,2,2,2,4,4,1],
-            [1,2,2,2,1,1,1,1,1,1,2,2,2,4,4,1],
-            [1,2,2,1,4,4,4,4,4,4,1,2,2,4,4,1],
-            [1,2,2,1,4,1,1,1,1,4,1,2,2,4,4,1],
-            [1,2,2,2,1,4,4,4,4,1,2,2,2,4,4,1],
-            [1,4,2,2,2,1,1,1,1,2,2,2,4,4,1,0],
-            [0,1,4,4,4,4,4,4,4,4,4,4,4,1,0,0],
-            [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0]
+            [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+            [4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4],
+            [4,2,1,1,1,1,1,1,1,1,1,1,1,1,2,4],
+            [4,2,1,1,1,1,1,1,1,1,1,1,1,1,2,4],
+            [4,2,1,1,3,3,1,1,1,1,3,3,1,1,2,4],
+            [4,2,1,3,3,3,3,1,1,3,3,3,3,1,2,4],
+            [4,2,1,3,3,4,3,1,1,3,3,4,3,1,2,4],
+            [4,2,1,1,3,3,1,1,1,1,3,3,1,1,2,4],
+            [4,2,1,1,1,1,1,1,1,1,1,1,1,1,2,4],
+            [4,2,1,1,1,1,4,4,4,4,1,1,1,1,2,4],
+            [4,2,1,1,1,4,4,4,4,4,4,1,1,1,2,4],
+            [4,2,1,1,1,4,1,4,4,1,4,1,1,1,2,4],
+            [4,2,1,1,1,1,4,4,4,4,1,1,1,1,2,4],
+            [4,2,1,1,1,1,1,1,1,1,1,1,1,1,2,4],
+            [4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4],
+            [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
         ];
 
         const colorMap = {
-            1: "#2d5a27", // Dark Green
-            2: "#478c3f", // Light Green
-            3: "#ff3333", // Red Eyes
-            4: "#1b3d17"  // Dark Shading
+            1: "#2d5a27", // Dark Green Body
+            2: "#478c3f", // Light Green Highlights
+            3: "#ff3333", // Glowing Red Eyes
+            4: "#152b12"  // Shadow Borders/Mouth Textures
         };
 
         // Track Inputs
@@ -226,7 +226,7 @@
             zombies.push({
                 x: x,
                 y: y,
-                size: 18, // Total collision box radius
+                size: 18, // Total collision bounding scale
                 speed: 0.8 + Math.random() + speedBonus,
                 angle: 0
             });
@@ -270,8 +270,8 @@
                 z.x += (dx / dist) * z.speed;
                 z.y += (dy / dist) * z.speed;
                 
-                // Track zombie's facing direction angle toward player
-                z.angle = Math.atan2(dy, dx);
+                // Track facing direction (Add Math.PI / 2 offset to properly orient front face)
+                z.angle = Math.atan2(dy, dx) + Math.PI / 2;
 
                 // Player collision check
                 if (dist < player.size + z.size) {
@@ -339,20 +339,18 @@
                 ctx.translate(z.x, z.y);
                 ctx.rotate(z.angle);
                 
-                const pixelSize = (z.size * 2) / 16; // Calculate width of 1 pixel in the matrix
+                const pixelSize = (z.size * 2) / 16; // Map dimensions cleanly across 16 rows
                 
-                // Read grid data and fill canvas pixel rects
                 for (let row = 0; row < 16; row++) {
                     for (let col = 0; col < 16; col++) {
                         const colorId = zombieCubeGrid[row][col];
                         if (colorId !== 0) {
                             ctx.fillStyle = colorMap[colorId];
-                            // Align drawing coordinates so it maps centered at (0,0)
                             ctx.fillRect(
                                 -z.size + (col * pixelSize), 
                                 -z.size + (row * pixelSize), 
-                                pixelSize + 0.5, // 0.5 prevents thin subpixel grid gap lines
-                                pixelSize + 0.5
+                                pixelSize + 0.4, // Prevents layout visual seam splits
+                                pixelSize + 0.4
                             );
                         }
                     }
