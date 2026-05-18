@@ -198,7 +198,7 @@
             zombies.push({
                 x: x,
                 y: y,
-                size: 16, // Collision box size matching the pixel cube aspect ratio
+                size: 20, // Bounding collision box size matching isometric asset constraints
                 speed: 0.8 + Math.random() + speedBonus,
                 angle: 0
             });
@@ -242,7 +242,7 @@
                 z.x += (dx / dist) * z.speed;
                 z.y += (dy / dist) * z.speed;
                 
-                // Track facing direction angle toward player
+                // Angle toward player
                 z.angle = Math.atan2(dy, dx);
 
                 // Player collision check
@@ -305,47 +305,108 @@
                 ctx.fill();
             });
 
-            // Draw Code-Generated Pixel Art Zombie Cubes
+            // Draw Isometric Pixel Art Zombie Cubes
             zombies.forEach(z => {
                 ctx.save();
                 ctx.translate(z.x, z.y);
-                ctx.rotate(z.angle);
                 
-                // Set pixel sizing grid dimensions relative to zombie size
-                const s = z.size;
-                const p = (s * 2) / 8; // Divide cube into an 8x8 block layout grid
-                
-                // 1. Base Main Head Layer (Dark Green Flesh Block)
-                ctx.fillStyle = "#2d5a27";
-                ctx.fillRect(-s, -s, s * 2, s * 2);
-                
-                // 2. Structural Shading & Dark Borders (Shadow outline)
-                ctx.fillStyle = "#152b12";
-                ctx.fillRect(-s, -s, s * 2, p);       // Top edge
-                ctx.fillRect(-s, s - p, s * 2, p);   // Bottom edge
-                ctx.fillRect(-s, -s, p, s * 2);       // Left edge
-                ctx.fillRect(s - p, -s, p, s * 2);    // Right edge
-                
-                // 3. Rotten Flesh Pixel Details
-                ctx.fillStyle = "#1b3d17"; 
-                ctx.fillRect(-s + p*2, -s + p*2, p, p);
-                ctx.fillRect(-s + p*5, -s + p*4, p, p);
-                ctx.fillRect(-s + p*3, -s + p*6, p, p);
+                // Subpixel rendering safety scale
+                const scale = 1.3; 
+                ctx.scale(scale, scale);
 
-                // 4. Light Green Textures / Moss Highlights
-                ctx.fillStyle = "#478c3f";
-                ctx.fillRect(-s + p*1, -s + p*2, p*2, p);
-                ctx.fillRect(-s + p*4, -s + p*5, p, p*2);
-                
-                // 5. Bright Glowing Red Eyes (Facing Right toward player target)
-                ctx.fillStyle = "#ff3333";
-                ctx.fillRect(s - p*2, -s + p*2, p, p); // Left Eye
-                ctx.fillRect(s - p*2, s - p*3, p, p);  // Right Eye
+                // --- 1. ISOMETRIC RIGHT SIDE SHIELD (Dark Green Profile Side) ---
+                ctx.fillStyle = "#0c381c"; // Shadows
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(14, -8);
+                ctx.lineTo(14, 10);
+                ctx.lineTo(2, 17);
+                ctx.closePath();
+                ctx.fill();
 
-                // 6. Deep Dark Mouth Opening
-                ctx.fillStyle = "#0c170a";
-                ctx.fillRect(s - p, -s + p*3, p, p*2);
-                
+                ctx.fillStyle = "#12542a"; // Medium green profile body
+                ctx.beginPath();
+                ctx.moveTo(2, 0);
+                ctx.lineTo(13, -6);
+                ctx.lineTo(13, 8);
+                ctx.lineTo(2, 14);
+                ctx.closePath();
+                ctx.fill();
+
+                // --- 2. ISOMETRIC TOP SIDE (Pink Exposed Brain) ---
+                ctx.fillStyle = "#612e38"; // Brain shade outline
+                ctx.beginPath();
+                ctx.moveTo(-11, -7);
+                ctx.lineTo(2, -15);
+                ctx.lineTo(14, -8);
+                ctx.lineTo(0, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = "#fca6b4"; // Soft pink brain tissue
+                ctx.beginPath();
+                ctx.moveTo(-9, -7);
+                ctx.lineTo(2, -13);
+                ctx.lineTo(12, -7);
+                ctx.lineTo(0, -1);
+                ctx.closePath();
+                ctx.fill();
+
+                // Brain texture wrinkles lines
+                ctx.strokeStyle = "#b35b6a";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-4, -6); ctx.lineTo(4, -10);
+                ctx.moveTo(-1, -4); ctx.lineTo(6, -8);
+                ctx.stroke();
+
+                // --- 3. ISOMETRIC FRONT FACE PANEL (Bright Green Face) ---
+                ctx.fillStyle = "#1b8241"; // Base face green tone
+                ctx.beginPath();
+                ctx.moveTo(-11, -7);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(2, 17);
+                ctx.lineTo(-10, 9);
+                ctx.closePath();
+                ctx.fill();
+
+                // Highlights along top face ridge edge
+                ctx.fillStyle = "#3be37c";
+                ctx.beginPath();
+                ctx.moveTo(-10, -6);
+                ctx.lineTo(0, -1);
+                ctx.lineTo(-1, 2);
+                ctx.lineTo(-10, -3);
+                ctx.closePath();
+                ctx.fill();
+
+                // --- 4. ZOMBIE FACE FACIAL FEATURES ---
+                // Left Eye (Big and wide out)
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(-8, -1, 3, 4);
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(-8, 1, 2, 2);
+
+                // Right Eye (Small and shifted higher up)
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(-3, -3, 2, 2);
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(-3, -2, 1, 1);
+
+                // Gaping Open Mouth
+                ctx.fillStyle = "#08140b";
+                ctx.beginPath();
+                ctx.moveTo(-7, 4);
+                ctx.lineTo(-2, 6);
+                ctx.lineTo(-4, 11);
+                ctx.lineTo(-8, 8);
+                ctx.closePath();
+                ctx.fill();
+
+                // Drool Drop (Small glowing blue pixels on chin)
+                ctx.fillStyle = "#4de3ff";
+                ctx.fillRect(-4, 11, 1.5, 2.5);
+
                 ctx.restore();
             });
 
