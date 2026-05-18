@@ -199,7 +199,7 @@
                 x: x, 
                 y: y, 
                 size: 20, 
-                speed: 0.8 + Math.random() + speedBonus 
+                speed: 0.8 + Math.random() + speedBonus
             }); 
         } 
 
@@ -298,9 +298,16 @@
                 ctx.translate(z.x, z.y); 
                 ctx.imageSmoothingEnabled = false; 
                 
-                // Matches the original dimensions perfectly centered 
                 const imgSize = 48; 
-                ctx.drawImage(zombieSprite, -imgSize / 2, -imgSize / 2, imgSize, imgSize); 
+                
+                // CRASH PROTECTION FILTER: Only draw if the base64 loading process has completed
+                if (zombieSprite.complete && zombieSprite.naturalWidth !== 0) {
+                    ctx.drawImage(zombieSprite, -imgSize / 2, -imgSize / 2, imgSize, imgSize); 
+                } else {
+                    // Fail-safe colored placeholder fallback to keep engine looping active without crashes
+                    ctx.fillStyle = "#1b8241";
+                    ctx.fillRect(-15, -15, 30, 30);
+                }
                 ctx.restore(); 
             }); 
 
