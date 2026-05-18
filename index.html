@@ -18,186 +18,201 @@
         <div class="stat">Score: <span id="score">0</span></div>
         <div class="stat">Health: <span id="health">100</span>%</div>
     </div>
-
     <div id="msg">
         <h1 style="font-size: 60px; color: #cc0000;">GAME OVER</h1>
         <p id="finalScore"></p>
         <button onclick="location.reload()">RETRY</button>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const healthEl = document.getElementById('health');
-        const msgEl = document.getElementById('msg');
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const healthEl = document.getElementById('health');
+const msgEl = document.getElementById('msg');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        let score = 0;
-        let health = 100;
-        let gameActive = true;
+let score = 0;
+let health = 100;
+let gameActive = true;
 
-        // ✅ WASD movement system
-        const keys = { w: false, a: false, s: false, d: false };
-        const playerSpeed = 5;
+// Time tracking variables for smooth movement across different monitors
+let lastTime = performance.now();
 
-        const player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            radius: 25
-        };
+// WASD Key Tracker
+const keys = { w: false, a: false, s: false, d: false };
+const basePlayerSpeed = 300; // Pixels per second (Independent of FPS)
+const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 };
+const projectiles = [];
+const enemies = [];
 
-        const projectiles = [];
-        const enemies = [];
+class Enemy {
+    constructor() {
+        const radius = 20;
+        let x, y;
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
+            y = Math.random() * canvas.height;
+        } else {
+            x = Math.random() * canvas.width;
+            y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
+        }
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        // Base speed converted to pixels per second
+        this.baseSpeed = 90 + (score * 0.3); 
+    }
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#4CAF50';
+        ctx.fill();
+        ctx.fillStyle = 'red';
+        ctx.fillRect(this.x - 5, this.y - 5, 3, 3);
+        ctx.fillRect(this.x + 2, this.y - 5, 3, 3);
+    }
+    update(dt) {
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        this.x += Math.cos(angle) * this.baseSpeed * dt;
+        this.y += Math.sin(angle) * this.baseSpeed * dt;
+    }
+}
 
-        class Enemy {
-            constructor() {
-                const radius = 20;
-                let x, y;
+// Click to shoot
+window.addEventListener('mousedown', (e) => {
+    if (!gameActive) return;
+    const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
+    // Projectile speed converted to pixels per second (8 * 60fps = 480)
+    projectiles.push({ 
+        x: player.x, 
+        y: player.y, 
+        vX: Math.cos(angle) * 480, 
+        vY: Math.sin(angle) * 480 
+    });
+});
 
-                if (Math.random() < 0.5) {
-                    x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
-                    y = Math.random() * canvas.height;
-                } else {
-                    x = Math.random() * canvas.width;
-                    y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
-                }
+// Event Listeners for WASD
+window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k in keys) keys[k] = true;
+});
+window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k in keys) keys[k] = false;
+});
 
-                this.x = x;
-                this.y = y;
-                this.radius = radius;
-                this.speed = 1.5 + (score / 200);
-            }
+function spawn() {
+    if (gameActive) {
+        enemies.push(new Enemy());
+        setTimeout(spawn, Math.max(300, 1000 - (score * 2)));
+    }
+}
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = '#4CAF50';
-                ctx.fill();
+function animate(currentTime) {
+    if (!gameActive) return;
+    requestAnimationFrame(animate);
+    
+    // Calculate fractional delta time seconds (e.g., 0.016s at 60 FPS)
+    const dt = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
 
-                ctx.fillStyle = 'red';
-                ctx.fillRect(this.x - 5, this.y - 5, 3, 3);
-                ctx.fillRect(this.x + 2, this.y - 5, 3, 3);
-            }
+    // Skip anomalies like tab-focus delays
+    if (dt > 0.1) return;
 
-            update() {
-                const angle = Math.atan2(player.y - this.y, player.x - this.x);
-                this.x += Math.cos(angle) * this.speed;
-                this.y += Math.sin(angle) * this.speed;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Diagonal movement speed normalization
+    let moveX = 0;
+    let moveY = 0;
+    if (keys.w) moveY -= 1;
+    if (keys.s) moveY += 1;
+    if (keys.a) moveX -= 1;
+    if (keys.d) moveX += 1;
+
+    if (moveX !== 0 && moveY !== 0) {
+        // Normalizes diagonal vectors so you don't move 1.4x faster diagonally
+        moveX *= 0.7071;
+        moveY *= 0.7071;
+    }
+
+    player.x += moveX * basePlayerSpeed * dt;
+    player.y += moveY * basePlayerSpeed * dt;
+
+    // Screen boundary limits
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+    // Render Player
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#2196F3';
+    ctx.fill();
+
+    // Process Projectiles
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.x += p.vX * dt;
+        p.y += p.vY * dt;
+        
+        ctx.fillStyle = '#FFEB3B';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+            projectiles.splice(i, 1);
+        }
+    }
+
+    // Process Enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const en = enemies[i];
+        en.update(dt);
+        en.draw();
+
+        // Check player collision
+        if (Math.hypot(player.x - en.x, player.y - en.y) < player.radius + en.radius) {
+            health -= 30 * dt; // Drains exactly 30 health units per second of contact
+            healthEl.innerText = Math.max(0, Math.ceil(health));
+            if (health <= 0) {
+                gameActive = false;
+                document.getElementById('finalScore').innerText = "Zombies Slain: " + score;
+                msgEl.style.display = 'block';
+                break;
             }
         }
 
-        // Mouse shooting
-        window.addEventListener('mousedown', (e) => {
-            if (!gameActive) return;
-
-            const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
-
-            projectiles.push({
-                x: player.x,
-                y: player.y,
-                vX: Math.cos(angle) * 8,
-                vY: Math.sin(angle) * 8
-            });
-        });
-
-        // WASD controls
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) keys[k] = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) keys[k] = false;
-        });
-
-        function spawn() {
-            if (gameActive) {
-                enemies.push(new Enemy());
-                setTimeout(spawn, Math.max(300, 1000 - (score * 2)));
+        // Check weapon hits
+        for (let j = projectiles.length - 1; j >= 0; j--) {
+            const p = projectiles[j];
+            if (Math.hypot(p.x - en.x, p.y - en.y) < en.radius) {
+                enemies.splice(i, 1);
+                projectiles.splice(j, 1);
+                score += 10;
+                scoreEl.innerText = score;
+                break; 
             }
         }
+    }
+}
 
-        function animate() {
-            if (!gameActive) return;
-            requestAnimationFrame(animate);
+spawn();
+// Initialize engine loop
+requestAnimationFrame((timestamp) => {
+    lastTime = timestamp;
+    animate(timestamp);
+});
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-
-            if (keys.w) player.y -= playerSpeed;
-            if (keys.s) player.y += playerSpeed;
-            if (keys.a) player.x -= playerSpeed;
-            if (keys.d) player.x += playerSpeed;
-
-            // keep player inside screen
-            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
-
-            // draw player
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#2196F3';
-            ctx.fill();
-
-            // projectiles
-            projectiles.forEach((p, i) => {
-                p.x += p.vX;
-                p.y += p.vY;
-
-                ctx.fillStyle = '#FFEB3B';
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-                    projectiles.splice(i, 1);
-                }
-            });
-
-            enemies.forEach((en, i) => {
-                en.update();
-                en.draw();
-
-                // collision with player
-                if (Math.hypot(player.x - en.x, player.y - en.y) < player.radius + en.radius) {
-                    health -= 0.5;
-                    healthEl.innerText = Math.ceil(health);
-
-                    if (health <= 0) {
-                        gameActive = false;
-                        document.getElementById('finalScore').innerText = "Zombies Slain: " + score;
-                        msgEl.style.display = 'block';
-                    }
-                }
-
-                // projectile hit
-                projectiles.forEach((p, pi) => {
-                    if (Math.hypot(p.x - en.x, p.y - en.y) < en.radius) {
-                        enemies.splice(i, 1);
-                        projectiles.splice(pi, 1);
-                        score += 10;
-                        scoreEl.innerText = score;
-                    }
-                });
-            });
-        }
-
-        spawn();
-        animate();
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-        });
-    </script>
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
 </body>
 </html>
+
