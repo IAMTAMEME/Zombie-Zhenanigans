@@ -39,11 +39,11 @@ let score = 0;
 let health = 100;
 let gameActive = true;
 
-// Track time frames robustly
+// Track time frames
 let lastTime = performance.now();
 
-// Keyboard control system
-const keys = { w: false, a: false, s: false, d: false };
+// Keyboard control system using strictly standard KeyCodes
+const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
 const basePlayerSpeed = 300; 
 const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 };
 const projectiles = [];
@@ -93,14 +93,16 @@ window.addEventListener('mousedown', (e) => {
     });
 });
 
-// Event handling
+// Event handling via physical key layout codes (ignores CapsLock/Language bugs)
 window.addEventListener('keydown', (e) => {
-    const k = e.key.toLowerCase();
-    if (k in keys) keys[k] = true;
+    if (e.code in keys) {
+        keys[e.code] = true;
+    }
 });
 window.addEventListener('keyup', (e) => {
-    const k = e.key.toLowerCase();
-    if (k in keys) keys[k] = false;
+    if (e.code in keys) {
+        keys[e.code] = false;
+    }
 });
 
 function spawn() {
@@ -114,25 +116,23 @@ function animate(currentTime) {
     if (!gameActive) return;
     requestAnimationFrame(animate);
     
-    // Safety check for initialization timestamp frame anomalies
     if (!currentTime) currentTime = performance.now();
     
     const dt = (currentTime - lastTime) / 1000;
     lastTime = currentTime;
 
-    // Prevent massive jumps if switching browser windows
     if (dt > 0.1 || isNaN(dt)) return;
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Calculate vectors
+    // Calculate directions
     let moveX = 0;
     let moveY = 0;
-    if (keys.w) moveY -= 1;
-    if (keys.s) moveY += 1;
-    if (keys.a) moveX -= 1;
-    if (keys.d) moveX += 1;
+    if (keys.KeyW) moveY -= 1;
+    if (keys.KeyS) moveY += 1;
+    if (keys.KeyA) moveX -= 1;
+    if (keys.KeyD) moveX += 1;
 
     // Normalize diagonal movement speed
     if (moveX !== 0 && moveY !== 0) {
@@ -201,8 +201,10 @@ function animate(currentTime) {
     }
 }
 
+// Automatically force the page window to grab keyboard input on run
+window.focus();
+
 spawn();
-// Safe engine start
 animate(performance.now());
 
 window.addEventListener('resize', () => {
