@@ -1,11 +1,252 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My First Page</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zombie Shooter</title>
+
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, sans-serif;
+    }
+
+    canvas {
+        display: block;
+        background: linear-gradient(#222, #111);
+    }
+
+    #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-size: 22px;
+        z-index: 10;
+    }
+
+    #gameOver {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 48px;
+        text-align: center;
+        display: none;
+    }
+
+    button {
+        padding: 10px 20px;
+        font-size: 20px;
+        margin-top: 20px;
+        cursor: pointer;
+    }
+</style>
 </head>
 <body>
-    <h1>Welcome to My Website</h1>
-    <p>This is my very first paragraph written in HTML!</p>
-    <a href="https://google.com">Click here to visit Google</a>
+
+<div id="ui">
+    Score: <span id="score">0</span>
+</div>
+
+<div id="gameOver">
+    <div>GAME OVER</div>
+    <button onclick="restartGame()">Restart</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const scoreEl = document.getElementById("score");
+const gameOverEl = document.getElementById("gameOver");
+
+let score = 0;
+let gameRunning = true;
+
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 20,
+    color: "cyan",
+    speed: 5
+};
+
+const bullets = [];
+const zombies = [];
+const keys = {};
+
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+canvas.addEventListener("click", shoot);
+
+function shoot(e) {
+    if (!gameRunning) return;
+
+    const angle = Math.atan2(
+        e.clientY - player.y,
+        e.clientX - player.x
+    );
+
+    bullets.push({
+        x: player.x,
+        y: player.y,
+        radius: 5,
+        color: "yellow",
+        dx: Math.cos(angle) * 10,
+        dy: Math.sin(angle) * 10
+    });
+}
+
+function spawnZombie() {
+    const side = Math.floor(Math.random() * 4);
+
+    let x, y;
+
+    if (side === 0) {
+        x = 0;
+        y = Math.random() * canvas.height;
+    } else if (side === 1) {
+        x = canvas.width;
+        y = Math.random() * canvas.height;
+    } else if (side === 2) {
+        x = Math.random() * canvas.width;
+        y = 0;
+    } else {
+        x = Math.random() * canvas.width;
+        y = canvas.height;
+    }
+
+    zombies.push({
+        x,
+        y,
+        radius: 20,
+        color: "lime",
+        speed: 1 + Math.random() * 1.5
+    });
+}
+
+setInterval(() => {
+    if (gameRunning) spawnZombie();
+}, 1000);
+
+function updatePlayer() {
+    if (keys["w"] || keys["ArrowUp"]) player.y -= player.speed;
+    if (keys["s"] || keys["ArrowDown"]) player.y += player.speed;
+    if (keys["a"] || keys["ArrowLeft"]) player.x -= player.speed;
+    if (keys["d"] || keys["ArrowRight"]) player.x += player.speed;
+
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+}
+
+function drawCircle(obj) {
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+    ctx.fillStyle = obj.color;
+    ctx.fill();
+}
+
+function gameLoop() {
+    if (!gameRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    updatePlayer();
+    drawCircle(player);
+
+    // Bullets
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+
+        b.x += b.dx;
+        b.y += b.dy;
+
+        drawCircle(b);
+
+        if (
+            b.x < 0 || b.x > canvas.width ||
+            b.y < 0 || b.y > canvas.height
+        ) {
+            bullets.splice(i, 1);
+        }
+    }
+
+    // Zombies
+    for (let i = zombies.length - 1; i >= 0; i--) {
+        const z = zombies[i];
+
+        const angle = Math.atan2(player.y - z.y, player.x - z.x);
+
+        z.x += Math.cos(angle) * z.speed;
+        z.y += Math.sin(angle) * z.speed;
+
+        drawCircle(z);
+
+        // Zombie hits player
+        const distToPlayer = Math.hypot(player.x - z.x, player.y - z.y);
+
+        if (distToPlayer < player.radius + z.radius) {
+            endGame();
+        }
+
+        // Bullet collisions
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            const b = bullets[j];
+
+            const dist = Math.hypot(b.x - z.x, b.y - z.y);
+
+            if (dist < b.radius + z.radius) {
+                zombies.splice(i, 1);
+                bullets.splice(j, 1);
+
+                score++;
+                scoreEl.textContent = score;
+                break;
+            }
+        }
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+    gameRunning = false;
+    gameOverEl.style.display = "block";
+}
+
+function restartGame() {
+    zombies.length = 0;
+    bullets.length = 0;
+
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+
+    score = 0;
+    scoreEl.textContent = score;
+
+    gameRunning = true;
+    gameOverEl.style.display = "none";
+
+    gameLoop();
+}
+
+gameLoop();
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
 </body>
 </html>
