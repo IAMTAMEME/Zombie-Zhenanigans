@@ -22,6 +22,10 @@
             font-size: 24px;
             font-weight: bold;
             letter-spacing: 1px;
+            text-align: center;
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
         }
         canvas {
             background-color: #1a1a1a;
@@ -48,13 +52,30 @@
             cursor: pointer;
             border-radius: 5px;
         }
+        #wave-banner {
+            position: absolute;
+            font-size: 64px;
+            color: #ffcc00;
+            font-weight: bold;
+            text-shadow: 3px 3px #000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">ZOMBIE ZENGANINZANS — Score: <span id="score">0</span></div>
+    <div id="ui">
+        <div>ZOMBIE ZENGANINZANS</div>
+        <div>Wave: <span id="wave">1</span></div>
+        <div>Score: <span id="score">0</span></div>
+    </div>
+    
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     
+    <div id="wave-banner">WAVE 1</div>
+
     <div id="gameover">
         GAME OVER
         <br>
@@ -65,7 +86,9 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
+const waveEl = document.getElementById("wave");
 const gameoverEl = document.getElementById("gameover");
+const waveBanner = document.getElementById("wave-banner");
 
 // Game State
 let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0 };
@@ -75,8 +98,11 @@ let keys = {};
 let mouse = { x: 0, y: 0 };
 let score = 0;
 let gameOver = false;
-let spawnRate = 1500; 
-let lastSpawn = 0;
+
+// Wave Logic Variables
+let currentWave = 0;
+let waveInProgress = false;
+let waveTimer = 0;
 
 // Track Inputs
 window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
@@ -87,7 +113,7 @@ canvas.addEventListener("mousemove", (e) => {
     mouse.y = e.clientY - rect.top;
 });
 canvas.addEventListener("mousedown", () => {
-    if (!gameOver) shoot();
+    if (!gameOver && waveInProgress) shoot();
 });
 
 function shoot() {
@@ -104,35 +130,70 @@ function shoot() {
     });
 }
 
+// Spawns multiple zombies instantly around map edges
+function startNextWave() {
+    currentWave++;
+    waveEl.innerText = currentWave;
+    waveInProgress = false;
+    
+    // Display big text announcement
+    waveBanner.innerText = `WAVE ${currentWave}`;
+    waveBanner.style.opacity = "1";
+
+    // Short 2-second delay before zombies flood the map
+    setTimeout(() => {
+        waveBanner.style.opacity = "0";
+        waveInProgress = true;
+        
+        // Equation to scale horde size: Wave 1 = 8, Wave 2 = 14, Wave 3 = 20, etc.
+        let zombieCount = 2 + (currentWave * 6); 
+        
+        for (let i = 0; i < zombieCount; i++) {
+            spawnZombie();
+        }
+    }, 2000);
+}
+
 function spawnZombie() {
     let x, y;
+    // Pick random border to spawn outside the frame
     if (Math.random() < 0.5) {
-        x = Math.random() < 0.5 ? -20 : canvas.width + 20;
+        x = Math.random() < 0.5 ? -30 : canvas.width + 30;
         y = Math.random() * canvas.height;
     } else {
         x = Math.random() * canvas.width;
-        y = Math.random() < 0.5 ? -20 : canvas.height + 20;
+        y = Math.random() < 0.5 ? -30 : canvas.height + 30;
     }
-    zombies.push({ x: x, y: y, size: 15, speed: 1.5 + Math.random() });
+    
+    // Scale zombie speeds slightly as wave counts increase
+    let speedBonus = Math.min(1.5, currentWave * 0.1); 
+    zombies.push({ 
+        x: x, 
+        y: y, 
+        size: 15, 
+        speed: 1.2 + Math.random() + speedBonus 
+    });
 }
 
-function update(time) {
+function update() {
     if (gameOver) return;
 
-    // 1. Movement System
+    // Start wave system if map becomes clear
+    if (zombies.length === 0 && !waveInProgress) {
+        startNextWave();
+    }
+
+    // Player Movement System
     if (keys['w'] || keys['arrowup']) player.y -= player.speed;
     if (keys['s'] || keys['arrowdown']) player.y += player.speed;
     if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
     if (keys['d'] || keys['arrowright']) player.x += player.speed;
 
-    // Boundary constraints
     player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
     player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-
-    // Player Rotation
     player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-    // 2. Shoot System (Bullets update)
+    // Bullet Updates
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.x += b.vx;
@@ -142,41 +203,42 @@ function update(time) {
         }
     }
 
-    // Zombie Spawning
-    if (time - lastSpawn > spawnRate) {
-        spawnZombie();
-        lastSpawn = time;
-        if (spawnRate > 500) spawnRate -= 10; 
-    }
+    // Zombie AI & Physics Loop
+    if (waveInProgress) {
+        for (let i = zombies.length - 1; i >= 0; i--) {
+            let z = zombies[i];
+            let dx = player.x - z.x;
+            let dy = player.y - z.y;
+            let dist = Math.hypot(dx, dy);
 
-    // Zombie AI & Collisions
-    for (let i = zombies.length - 1; i >= 0; i--) {
-        let z = zombies[i];
-        let dx = player.x - z.x;
-        let dy = player.y - z.y;
-        let dist = Math.hypot(dx, dy);
+            // Pathfinding toward player coordinates
+            z.x += (dx / dist) * z.speed;
+            z.y += (dy / dist) * z.speed;
 
-        // Move toward player
-        z.x += (dx / dist) * z.speed;
-        z.y += (dy / dist) * z.speed;
-
-        // Player collision check
-        if (dist < player.size + z.size) {
-            gameOver = true;
-            gameoverEl.style.display = "block";
-        }
-
-        // Bullet collision check
-        for (let j = bullets.length - 1; j >= 0; j--) {
-            let b = bullets[j];
-            let bDist = Math.hypot(b.x - z.x, b.y - z.y);
-            if (bDist < z.size + b.size) {
-                zombies.splice(i, 1);
-                bullets.splice(j, 1);
-                score += 10;
-                scoreEl.innerText = score;
-                break;
+            // Player hit validation
+            if (dist < player.size + z.size) {
+                gameOver = true;
+                waveInProgress = false;
+                gameoverEl.style.display = "block";
             }
+
+            // Bullet hit registration
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                let b = bullets[j];
+                let bDist = Math.hypot(b.x - z.x, b.y - z.y);
+                if (bDist < z.size + b.size) {
+                    zombies.splice(i, 1);
+                    bullets.splice(j, 1);
+                    score += 10;
+                    scoreEl.innerText = score;
+                    break;
+                }
+            }
+        }
+        
+        // Trigger condition if last zombie dies mid-combat
+        if (zombies.length === 0) {
+            waveInProgress = false;
         }
     }
 }
@@ -184,7 +246,7 @@ function update(time) {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Player
+    // Draw Player Body and Gun Direction
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
@@ -192,12 +254,11 @@ function render() {
     ctx.beginPath();
     ctx.arc(0, 0, player.size, 0, Math.PI * 2);
     ctx.fill();
-    // Gun pointer
     ctx.fillStyle = "#555";
     ctx.fillRect(0, -4, 25, 8);
     ctx.restore();
 
-    // Draw Bullets
+    // Draw Projectiles
     ctx.fillStyle = "#ffcc00";
     bullets.forEach(b => {
         ctx.beginPath();
@@ -205,13 +266,12 @@ function render() {
         ctx.fill();
     });
 
-    // Draw Zombies
+    // Draw Active Zombie Horde
     ctx.fillStyle = "#a83232";
     zombies.forEach(z => {
         ctx.beginPath();
         ctx.arc(z.x, z.y, z.size, 0, Math.PI * 2);
         ctx.fill();
-        // Zombie eyes
         ctx.fillStyle = "#fff";
         ctx.fillRect(z.x - 3, z.y - 3, 2, 2);
         ctx.fillRect(z.x + 1, z.y - 3, 2, 2);
@@ -219,8 +279,8 @@ function render() {
     });
 }
 
-function loop(time) {
-    update(time);
+function loop() {
+    update();
     render();
     requestAnimationFrame(loop);
 }
@@ -230,16 +290,18 @@ function resetGame() {
     bullets = [];
     zombies = [];
     score = 0;
-    spawnRate = 1500;
+    currentWave = 0;
     gameOver = false;
+    waveInProgress = false;
     scoreEl.innerText = score;
+    waveEl.innerText = 1;
     gameoverEl.style.display = "none";
+    waveBanner.style.opacity = "0";
 }
 
-// Start game
-requestAnimationFrame(loop);
+// Initial engine kickoff
+loop();
 </script>
 
 </body>
 </html>
-
