@@ -18,11 +18,13 @@
         <div class="stat">Score: <span id="score">0</span></div>
         <div class="stat">Health: <span id="health">100</span>%</div>
     </div>
+
     <div id="msg">
         <h1 style="font-size: 60px; color: #cc0000;">GAME OVER</h1>
         <p id="finalScore"></p>
         <button onclick="location.reload()">RETRY</button>
     </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
@@ -31,7 +33,7 @@
         const scoreEl = document.getElementById('score');
         const healthEl = document.getElementById('health');
         const msgEl = document.getElementById('msg');
-        
+
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
@@ -39,7 +41,16 @@
         let health = 100;
         let gameActive = true;
 
-        const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 };
+        // ✅ WASD movement system
+        const keys = { w: false, a: false, s: false, d: false };
+        const playerSpeed = 5;
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 25
+        };
+
         const projectiles = [];
         const enemies = [];
 
@@ -47,6 +58,7 @@
             constructor() {
                 const radius = 20;
                 let x, y;
+
                 if (Math.random() < 0.5) {
                     x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
                     y = Math.random() * canvas.height;
@@ -54,20 +66,24 @@
                     x = Math.random() * canvas.width;
                     y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
                 }
+
                 this.x = x;
                 this.y = y;
                 this.radius = radius;
                 this.speed = 1.5 + (score / 200);
             }
+
             draw() {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = '#4CAF50';
                 ctx.fill();
+
                 ctx.fillStyle = 'red';
                 ctx.fillRect(this.x - 5, this.y - 5, 3, 3);
                 ctx.fillRect(this.x + 2, this.y - 5, 3, 3);
             }
+
             update() {
                 const angle = Math.atan2(player.y - this.y, player.x - this.x);
                 this.x += Math.cos(angle) * this.speed;
@@ -75,14 +91,29 @@
             }
         }
 
+        // Mouse shooting
         window.addEventListener('mousedown', (e) => {
             if (!gameActive) return;
+
             const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
+
             projectiles.push({
-                x: player.x, y: player.y,
+                x: player.x,
+                y: player.y,
                 vX: Math.cos(angle) * 8,
                 vY: Math.sin(angle) * 8
             });
+        });
+
+        // WASD controls
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k in keys) keys[k] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k in keys) keys[k] = false;
         });
 
         function spawn() {
@@ -95,31 +126,50 @@
         function animate() {
             if (!gameActive) return;
             requestAnimationFrame(animate);
+
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+
+            if (keys.w) player.y -= playerSpeed;
+            if (keys.s) player.y += playerSpeed;
+            if (keys.a) player.x -= playerSpeed;
+            if (keys.d) player.x += playerSpeed;
+
+            // keep player inside screen
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+            // draw player
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#2196F3';
             ctx.fill();
 
+            // projectiles
             projectiles.forEach((p, i) => {
                 p.x += p.vX;
                 p.y += p.vY;
+
                 ctx.fillStyle = '#FFEB3B';
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
                 ctx.fill();
-                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) projectiles.splice(i, 1);
+
+                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                    projectiles.splice(i, 1);
+                }
             });
 
             enemies.forEach((en, i) => {
                 en.update();
                 en.draw();
 
+                // collision with player
                 if (Math.hypot(player.x - en.x, player.y - en.y) < player.radius + en.radius) {
                     health -= 0.5;
                     healthEl.innerText = Math.ceil(health);
+
                     if (health <= 0) {
                         gameActive = false;
                         document.getElementById('finalScore').innerText = "Zombies Slain: " + score;
@@ -127,6 +177,7 @@
                     }
                 }
 
+                // projectile hit
                 projectiles.forEach((p, pi) => {
                     if (Math.hypot(p.x - en.x, p.y - en.y) < en.radius) {
                         enemies.splice(i, 1);
@@ -140,6 +191,7 @@
 
         spawn();
         animate();
+
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
