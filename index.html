@@ -130,7 +130,9 @@ function shoot() {
 }
 
 function startNextWave() {
-    waveState = "SPAWNING";
+    // CRITICAL FIX: Lock the state immediately so the game loop doesn't run this function again next frame
+    waveState = "SPAWNING"; 
+    
     currentWave++;
     waveEl.innerText = currentWave;
     
@@ -140,6 +142,8 @@ function startNextWave() {
 
     // Wait exactly 2 seconds before generating the horde
     setTimeout(() => {
+        if (gameOver) return; // Don't spawn if player died during intermission
+        
         waveBanner.style.opacity = "0";
         
         // Spawn configuration: Wave 1 = 5, Wave 2 = 10, Wave 3 = 15, etc.
@@ -175,7 +179,7 @@ function spawnZombie() {
 function update() {
     if (gameOver) return;
 
-    // Fixed Trigger: Only starts a new wave if the current one is fully completed
+    // Trigger next wave only when empty and ready
     if (zombies.length === 0 && waveState === "READY_TO_START") {
         startNextWave();
     }
@@ -231,7 +235,7 @@ function update() {
         }
     }
 
-    // Reset status to launch the next sequence when clear
+    // Reset status to launch the next sequence when all zombies are cleared
     if (zombies.length === 0 && waveState === "FIGHTING") {
         waveState = "READY_TO_START";
     }
