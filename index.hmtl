@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Zombie Shooter</title>
+    <title>Zombie Shooter</title>
     <style>
-        body { margin: 0; background: #111; color: white; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; background: #222; }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        /* Force dark theme for visibility */
+        body { margin: 0; background-color: #111 !important; color: #ffffff !important; overflow: hidden; font-family: Arial, sans-serif; }
+        canvas { display: block; background: #222; margin: 0 auto; border: 2px solid #444; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
+        h1, p { color: #ffffff !important; text-shadow: 2px 2px 4px #000; }
     </style>
 </head>
 <body>
     <div id="ui">
         <h1>Score: <span id="score">0</span></h1>
-        <p>Move mouse to aim, Click to shoot</p>
+        <p>Aim with mouse | Click to shoot</p>
     </div>
     <canvas id="gameCanvas"></canvas>
 
@@ -22,8 +24,9 @@
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Set fixed size if window size fails
+        canvas.width = window.innerWidth || 800;
+        canvas.height = window.innerHeight || 600;
 
         let score = 0;
         const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 20, color: '#3498db' };
@@ -41,29 +44,29 @@
                 y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
             }
             const angle = Math.atan2(player.y - y, player.x - x);
-            enemies.push({ x, y, radius, color: '#2ecc71', velocity: { x: Math.cos(angle) * 2, y: Math.sin(angle) * 2 } });
+            enemies.push({ x, y, radius, color: '#e74c3c', velocity: { x: Math.cos(angle) * 1.5, y: Math.sin(angle) * 1.5 } });
         }
 
         window.addEventListener('click', (e) => {
             const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
             projectiles.push({
                 x: player.x, y: player.y, radius: 5, color: '#f1c40f',
-                velocity: { x: Math.cos(angle) * 6, y: Math.sin(angle) * 6 }
+                velocity: { x: Math.cos(angle) * 5, y: Math.sin(angle) * 5 }
             });
         });
 
         function animate() {
             requestAnimationFrame(animate);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            // Clear screen with slight trail effect
+            ctx.fillStyle = 'rgba(17, 17, 17, 0.2)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Player
+            // Player
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fillStyle = player.color;
             ctx.fill();
 
-            // Update Projectiles
             projectiles.forEach((p, i) => {
                 p.x += p.velocity.x;
                 p.y += p.velocity.y;
@@ -74,7 +77,6 @@
                 if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) projectiles.splice(i, 1);
             });
 
-            // Update Enemies
             enemies.forEach((enemy, index) => {
                 enemy.x += enemy.velocity.x;
                 enemy.y += enemy.velocity.y;
@@ -83,14 +85,13 @@
                 ctx.fillStyle = enemy.color;
                 ctx.fill();
 
-                // Collision with Player (Game Over)
-                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (dist - enemy.radius - player.radius < 1) location.reload();
+                if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.radius + enemy.radius) {
+                    alert("GAME OVER! Score: " + score);
+                    location.reload();
+                }
 
-                // Collision with Bullet
                 projectiles.forEach((p, pIndex) => {
-                    const d = Math.hypot(p.x - enemy.x, p.y - enemy.y);
-                    if (d - enemy.radius - p.radius < 1) {
+                    if (Math.hypot(p.x - enemy.x, p.y - enemy.y) < p.radius + enemy.radius) {
                         enemies.splice(index, 1);
                         projectiles.splice(pIndex, 1);
                         score += 10;
@@ -100,7 +101,7 @@
             });
         }
 
-        setInterval(spawnEnemy, 1000);
+        setInterval(spawnEnemy, 1500);
         animate();
     </script>
 </body>
