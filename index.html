@@ -1,216 +1,186 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Zhenanigans</title>
-    <style>
-        body { margin: 0; background-color: #000; color: #fff; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
-        canvas { display: block; cursor: crosshair; }
-        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
-        .stat { font-size: 24px; text-shadow: 2px 2px #cc0000; margin-bottom: 5px; }
-        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: none; }
-        button { padding: 10px 20px; font-size: 20px; cursor: pointer; background: #cc0000; border: none; color: white; pointer-events: auto; }
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <div class="stat">Score: <span id="score">0</span></div>
-        <div class="stat">Health: <span id="health">100</span>%</div>
-    </div>
-    <div id="msg">
-        <h1 style="font-size: 60px; color: #cc0000;">GAME OVER</h1>
-        <p id="finalScore"></p>
-        <button onclick="location.reload()">RETRY</button>
-    </div>
-    <canvas id="gameCanvas"></canvas>
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Zombie Zhenanigans</title> 
+    <style> 
+        body { margin: 0; background-color: #000; color: #fff; overflow: hidden; font-family: 'Courier New', Courier, monospace; } 
+        canvas { display: block; cursor: crosshair; } 
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; } 
+        .stat { font-size: 24px; text-shadow: 2px 2px #cc0000; margin-bottom: 5px; } 
+        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: none; } 
+        button { padding: 10px 20px; font-size: 20px; cursor: pointer; background: #cc0000; border: none; color: white; pointer-events: auto; } 
+    </style> 
+</head> 
+<body> 
+    <div id="ui"> 
+        <div class="stat">Score: <span id="score">0</span></div> 
+        <div class="stat">Health: <span id="health">100</span>%</div> 
+    </div> 
+    <div id="msg"> 
+        <h1 style="font-size: 60px; color: #cc0000;">GAME OVER</h1> 
+        <p id="finalScore"></p> 
+        <button onclick="location.reload()">RETRY</button> 
+    </div> 
+    <canvas id="gameCanvas"></canvas> 
 
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const healthEl = document.getElementById('health');
-const msgEl = document.getElementById('msg');
+<script> 
+const canvas = document.getElementById('gameCanvas'); 
+const ctx = canvas.getContext('2d'); 
+const scoreEl = document.getElementById('score'); 
+const healthEl = document.getElementById('health'); 
+const msgEl = document.getElementById('msg'); 
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = window.innerWidth; 
+canvas.height = window.innerHeight; 
 
-let score = 0;
-let health = 100;
-let gameActive = true;
+let score = 0; 
+let health = 100; 
+let gameActive = true; 
 
-// Track time frames
-let lastTime = performance.now();
+// Physical keyboard layout tracking (immune to lock keys or casing bugs)
+const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false }; 
+const playerSpeed = 5; 
+const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 }; 
+const projectiles = []; 
+const enemies = []; 
 
-// Keyboard control system using strictly standard KeyCodes
-const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
-const basePlayerSpeed = 300; 
-const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 };
-const projectiles = [];
-const enemies = [];
+class Enemy { 
+    constructor() { 
+        const radius = 20; 
+        let x, y; 
+        if (Math.random() < 0.5) { 
+            x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius; 
+            y = Math.random() * canvas.height; 
+        } else { 
+            x = Math.random() * canvas.width; 
+            y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius; 
+        } 
+        this.x = x; 
+        this.y = y; 
+        this.radius = radius; 
+        this.speed = 1.5 + (score / 200); 
+    } 
+    draw() { 
+        ctx.beginPath(); 
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); 
+        ctx.fillStyle = '#4CAF50'; 
+        ctx.fill(); 
+        ctx.fillStyle = 'red'; 
+        ctx.fillRect(this.x - 5, this.y - 5, 3, 3); 
+        ctx.fillRect(this.x + 2, this.y - 5, 3, 3); 
+    } 
+    update() { 
+        const angle = Math.atan2(player.y - this.y, player.x - this.x); 
+        this.x += Math.cos(angle) * this.speed; 
+        this.y += Math.sin(angle) * this.speed; 
+    } 
+} 
 
-class Enemy {
-    constructor() {
-        const radius = 20;
-        let x, y;
-        if (Math.random() < 0.5) {
-            x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
-            y = Math.random() * canvas.height;
-        } else {
-            x = Math.random() * canvas.width;
-            y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
-        }
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.baseSpeed = 90 + (score * 0.3); 
-    }
-    draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#4CAF50';
-        ctx.fill();
-        ctx.fillStyle = 'red';
-        ctx.fillRect(this.x - 5, this.y - 5, 3, 3);
-        ctx.fillRect(this.x + 2, this.y - 5, 3, 3);
-    }
-    update(dt) {
-        const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        this.x += Math.cos(angle) * this.baseSpeed * dt;
-        this.y += Math.sin(angle) * this.baseSpeed * dt;
-    }
-}
+// Mouse firing system
+window.addEventListener('mousedown', (e) => { 
+    if (!gameActive) return; 
+    const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x); 
+    projectiles.push({ x: player.x, y: player.y, vX: Math.cos(angle) * 8, vY: Math.sin(angle) * 8 }); 
+}); 
 
-// Shooting physics
-window.addEventListener('mousedown', (e) => {
-    if (!gameActive) return;
-    const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
-    projectiles.push({ 
-        x: player.x, 
-        y: player.y, 
-        vX: Math.cos(angle) * 480, 
-        vY: Math.sin(angle) * 480 
-    });
-});
+// Rebuilt input processing listeners using absolute physical keyboard codes
+window.addEventListener('keydown', (e) => { 
+    if (e.code in keys) keys[e.code] = true; 
+}); 
+window.addEventListener('keyup', (e) => { 
+    if (e.code in keys) keys[e.code] = false; 
+}); 
 
-// Event handling via physical key layout codes (ignores CapsLock/Language bugs)
-window.addEventListener('keydown', (e) => {
-    if (e.code in keys) {
-        keys[e.code] = true;
-    }
-});
-window.addEventListener('keyup', (e) => {
-    if (e.code in keys) {
-        keys[e.code] = false;
-    }
-});
+function spawn() { 
+    if (gameActive) { 
+        enemies.push(new Enemy()); 
+        setTimeout(spawn, Math.max(300, 1000 - (score * 2))); 
+    } 
+} 
 
-function spawn() {
-    if (gameActive) {
-        enemies.push(new Enemy());
-        setTimeout(spawn, Math.max(300, 1000 - (score * 2)));
-    }
-}
-
-function animate(currentTime) {
-    if (!gameActive) return;
-    requestAnimationFrame(animate);
+function animate() { 
+    if (!gameActive) return; 
+    requestAnimationFrame(animate); 
     
-    if (!currentTime) currentTime = performance.now();
-    
-    const dt = (currentTime - lastTime) / 1000;
-    lastTime = currentTime;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height); 
 
-    if (dt > 0.1 || isNaN(dt)) return;
+    // Handle character position transformations
+    if (keys.KeyW) player.y -= playerSpeed; 
+    if (keys.KeyS) player.y += playerSpeed; 
+    if (keys.KeyA) player.x -= playerSpeed; 
+    if (keys.KeyD) player.x += playerSpeed; 
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Keep player inside boundary constraints
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x)); 
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y)); 
 
-    // Calculate directions
-    let moveX = 0;
-    let moveY = 0;
-    if (keys.KeyW) moveY -= 1;
-    if (keys.KeyS) moveY += 1;
-    if (keys.KeyA) moveX -= 1;
-    if (keys.KeyD) moveX += 1;
+    // Draw main character
+    ctx.beginPath(); 
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); 
+    ctx.fillStyle = '#2196F3'; 
+    ctx.fill(); 
 
-    // Normalize diagonal movement speed
-    if (moveX !== 0 && moveY !== 0) {
-        moveX *= 0.7071;
-        moveY *= 0.7071;
-    }
-
-    player.x += moveX * basePlayerSpeed * dt;
-    player.y += moveY * basePlayerSpeed * dt;
-
-    // Screen boundaries restriction
-    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
-
-    // Render character
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#2196F3';
-    ctx.fill();
-
-    // Render & control Projectiles
-    for (let i = projectiles.length - 1; i >= 0; i--) {
+    // Handle projectile rendering & clean up (Iterated backwards to prevent splicing bugs)
+    for (let i = projectiles.length - 1; i >= 0; i--) { 
         const p = projectiles[i];
-        p.x += p.vX * dt;
-        p.y += p.vY * dt;
+        p.x += p.vX; 
+        p.y += p.vY; 
         
-        ctx.fillStyle = '#FFEB3B';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = '#FFEB3B'; 
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); 
+        ctx.fill(); 
 
-        if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-            projectiles.splice(i, 1);
-        }
-    }
+        if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) { 
+            projectiles.splice(i, 1); 
+        } 
+    } 
 
-    // Render & control Entities
-    for (let i = enemies.length - 1; i >= 0; i--) {
+    // Handle zombie entity processing & collision safely loops
+    for (let i = enemies.length - 1; i >= 0; i--) { 
         const en = enemies[i];
-        en.update(dt);
-        en.draw();
+        en.update(); 
+        en.draw(); 
 
-        // Player health loss mechanics
-        if (Math.hypot(player.x - en.x, player.y - en.y) < player.radius + en.radius) {
-            health -= 30 * dt; 
-            healthEl.innerText = Math.max(0, Math.ceil(health));
-            if (health <= 0) {
-                gameActive = false;
-                document.getElementById('finalScore').innerText = "Zombies Slain: " + score;
-                msgEl.style.display = 'block';
+        // Player health reduction detection
+        if (Math.hypot(player.x - en.x, player.y - en.y) < player.radius + en.radius) { 
+            health -= 0.5; 
+            healthEl.innerText = Math.max(0, Math.ceil(health)); 
+            if (health <= 0) { 
+                gameActive = false; 
+                document.getElementById('finalScore').innerText = "Zombies Slain: " + score; 
+                msgEl.style.display = 'block'; 
                 break;
-            }
-        }
+            } 
+        } 
 
-        // Damage calculation
-        for (let j = projectiles.length - 1; j >= 0; j--) {
+        // Projectile attack hit connection
+        for (let j = projectiles.length - 1; j >= 0; j--) { 
             const p = projectiles[j];
-            if (Math.hypot(p.x - en.x, p.y - en.y) < en.radius) {
-                enemies.splice(i, 1);
-                projectiles.splice(j, 1);
-                score += 10;
-                scoreEl.innerText = score;
-                break; 
-            }
-        }
-    }
-}
+            if (Math.hypot(p.x - en.x, p.y - en.y) < en.radius) { 
+                enemies.splice(i, 1); 
+                projectiles.splice(j, 1); 
+                score += 10; 
+                scoreEl.innerText = score; 
+                break; // Exit projectile loop since enemy is destroyed
+            } 
+        } 
+    } 
+} 
 
-// Automatically force the page window to grab keyboard input on run
+// Automatically capture focus on window execution
 window.focus();
 
-spawn();
-animate(performance.now());
+spawn(); 
+animate(); 
 
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
-</script>
-</body>
+window.addEventListener('resize', () => { 
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight; 
+}); 
+</script> 
+</body> 
 </html>
