@@ -115,14 +115,6 @@
         const gameoverEl = document.getElementById("gameover");
         const waveBanner = document.getElementById("wave-banner");
 
-        // Disable smoothing to keep the pixel art asset crisp
-        ctx.imageSmoothingEnabled = false;
-
-        // Load Pixel Art Zombie Cube Sprite
-        const zombieSprite = new Image();
-        // REPLACE THIS URL with your actual image path or URL
-        zombieSprite.src = 'your-image-path.png'; 
-
         // Game State
         let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
         let bullets = [];
@@ -143,6 +135,34 @@
         // Invincibility frame timer so player doesn't instantly melt
         let lastHitTime = 0;
         const hitCooldown = 400;
+
+        // Programmatic 16x16 Pixel Art Grid for the Zombie Cube
+        // 0 = Transparent, 1 = Dark Green Body, 2 = Light Green Highlights, 3 = Red Eyes, 4 = Dark Shading
+        const zombieCubeGrid = [
+            [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+            [0,1,2,2,2,2,2,2,2,2,2,2,2,4,1,0],
+            [1,2,2,2,2,2,2,2,2,2,2,2,2,4,4,1],
+            [1,2,2,1,1,2,2,2,2,1,1,2,2,4,4,1],
+            [1,2,3,3,3,1,2,2,1,3,3,3,2,4,4,1],
+            [1,2,3,3,3,1,2,2,1,3,3,3,2,4,4,1],
+            [1,2,1,1,1,2,2,2,2,1,1,1,2,4,4,1],
+            [1,2,2,2,2,2,4,4,2,2,2,2,2,4,4,1],
+            [1,2,2,2,2,4,1,1,4,2,2,2,2,4,4,1],
+            [1,2,2,2,1,1,1,1,1,1,2,2,2,4,4,1],
+            [1,2,2,1,4,4,4,4,4,4,1,2,2,4,4,1],
+            [1,2,2,1,4,1,1,1,1,4,1,2,2,4,4,1],
+            [1,2,2,2,1,4,4,4,4,1,2,2,2,4,4,1],
+            [1,4,2,2,2,1,1,1,1,2,2,2,4,4,1,0],
+            [0,1,4,4,4,4,4,4,4,4,4,4,4,1,0,0],
+            [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0]
+        ];
+
+        const colorMap = {
+            1: "#2d5a27", // Dark Green
+            2: "#478c3f", // Light Green
+            3: "#ff3333", // Red Eyes
+            4: "#1b3d17"  // Dark Shading
+        };
 
         // Track Inputs
         window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
@@ -206,7 +226,7 @@
             zombies.push({
                 x: x,
                 y: y,
-                size: 16, // Tweaked slightly to perfectly map to a 32x32 square scale
+                size: 18, // Total collision box radius
                 speed: 0.8 + Math.random() + speedBonus,
                 angle: 0
             });
@@ -313,23 +333,29 @@
                 ctx.fill();
             });
 
-            // Draw Active Zombie Horde using the Pixel Art Asset
+            // Draw Code-Generated Pixel Art Zombie Cubes
             zombies.forEach(z => {
                 ctx.save();
                 ctx.translate(z.x, z.y);
                 ctx.rotate(z.angle);
                 
-                // If image fails to load or path is empty, fall back safely to a box outline
-                if (zombieSprite.complete && zombieSprite.naturalWidth !== 0) {
-                    // Draws asset centered at 32x32 size
-                    ctx.drawImage(zombieSprite, -z.size, -z.size, z.size * 2, z.size * 2);
-                } else {
-                    // Fallback visual indicator
-                    ctx.fillStyle = "#a83232";
-                    ctx.fillRect(-z.size, -z.size, z.size * 2, z.size * 2);
-                    ctx.fillStyle = "#fff";
-                    ctx.fillRect(4, -6, 4, 4);
-                    ctx.fillRect(4, 2, 4, 4);
+                const pixelSize = (z.size * 2) / 16; // Calculate width of 1 pixel in the matrix
+                
+                // Read grid data and fill canvas pixel rects
+                for (let row = 0; row < 16; row++) {
+                    for (let col = 0; col < 16; col++) {
+                        const colorId = zombieCubeGrid[row][col];
+                        if (colorId !== 0) {
+                            ctx.fillStyle = colorMap[colorId];
+                            // Align drawing coordinates so it maps centered at (0,0)
+                            ctx.fillRect(
+                                -z.size + (col * pixelSize), 
+                                -z.size + (row * pixelSize), 
+                                pixelSize + 0.5, // 0.5 prevents thin subpixel grid gap lines
+                                pixelSize + 0.5
+                            );
+                        }
+                    }
                 }
                 ctx.restore();
             });
