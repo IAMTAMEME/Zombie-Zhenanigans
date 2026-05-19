@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Apocalypse - Pixel Survival</title>
+    <title>Zombie Apocalypse - Retro Arcade Edition</title>
     <style>
         body {
             margin: 0;
-            background-color: #050505;
-            color: #bdc3c7;
+            background-color: #000000;
+            color: #33ff33; /* Neon retro green */
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
@@ -19,50 +19,55 @@
         }
         #ui-wrapper {
             position: relative;
+            border: 4px solid #33ff33; /* Retro neon terminal frame */
+            box-shadow: 0 0 25px #33ff33;
         }
         canvas {
-            border: 6px solid #2c3e50;
-            background-color: #11141a; 
+            background-color: #05080c; 
             image-rendering: pixelated;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
             cursor: crosshair;
+            display: block;
         }
         #hud {
             position: absolute;
-            top: 20px;
+            top: 15px;
             left: 20px;
-            color: #e74c3c;
-            font-size: 18px;
+            color: #33ff33;
+            font-size: 16px;
             font-weight: bold;
             text-shadow: 2px 2px #000;
             pointer-events: none;
-            line-height: 1.5;
+            letter-spacing: 2px;
+            line-height: 1.4;
         }
-        /* Health Bar UI Container */
+        /* Massive, Ultra-Visible Retro Canvas Health Bar */
         #health-container {
             position: absolute;
-            top: 20px;
+            top: 15px;
             right: 20px;
-            width: 200px;
-            height: 20px;
-            background-color: #555;
-            border: 3px solid #000;
+            width: 250px;
+            height: 24px;
+            background-color: #111;
+            border: 3px solid #33ff33;
+            box-shadow: 0 0 10px #33ff33;
             pointer-events: none;
+            padding: 2px;
+            box-sizing: border-box;
         }
         #health-bar {
             width: 100%;
             height: 100%;
-            background-color: #c0392b;
-            transition: width 0.1s ease;
+            background-color: #33ff33; /* Green retro bar */
+            box-shadow: 0 0 8px #33ff33;
         }
         #instructions {
             margin-top: 15px;
-            color: #7f8c8d;
-            font-size: 16px;
+            color: #33ff33;
+            font-size: 14px;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
             text-align: center;
-            font-weight: bold;
+            text-shadow: 0 0 5px #33ff33;
         }
     </style>
 </head>
@@ -76,7 +81,7 @@
         </div>
     </div>
     <div id="instructions">
-        [WASD/Arrows] Move | [Left Click] Fire Pixel Blaster | [R] Retry Apocalypse
+        [WASD] Move | [Left Click] Laser Fire | [R] Reboot System
     </div>
 
 <script>
@@ -91,12 +96,12 @@ let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     size: 24,
-    speed: 3.5,
+    speed: 3.8,
     health: 100,
     maxHealth: 100,
     kills: 0,
     lastShotTime: 0,
-    shootCooldown: 200
+    shootCooldown: 180
 };
 
 let keys = {};
@@ -105,22 +110,18 @@ let zombies = [];
 let bullets = [];
 let particles = []; 
 let wave = 1;
-let zombiesToSpawn = 5;
+let zombiesToSpawn = 6;
 let zombiesSpawned = 0;
 let lastSpawnTime = 0;
-let spawnDelay = 1200;
+let spawnDelay = 1000;
 let gameOver = false;
 
 // Event Listeners
 window.addEventListener("keydown", (e) => {
     keys[e.key.toLowerCase()] = true;
-    if (gameOver && e.key.toLowerCase() === 'r') {
-        resetGame();
-    }
+    if (gameOver && e.key.toLowerCase() === 'r') resetGame();
 });
-window.addEventListener("keyup", (e) => {
-    keys[e.key.toLowerCase()] = false;
-});
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
@@ -130,26 +131,24 @@ canvas.addEventListener("mousedown", () => mouse.isPressed = true);
 canvas.addEventListener("mouseup", () => mouse.isPressed = false);
 
 // Classes
-class PixelParticle {
+class RetroParticle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
         this.size = Math.floor(Math.random() * 3) + 3;
-        this.speed = Math.random() * 3 + 1;
+        this.speed = Math.random() * 4 + 2;
         this.angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(this.angle) * this.speed;
         this.vy = Math.sin(this.angle) * this.speed;
         this.alpha = 1;
-        this.decay = Math.random() * 0.03 + 0.02;
+        this.decay = Math.random() * 0.04 + 0.03;
         this.color = color;
     }
-
     update() {
         this.x += this.vx;
         this.y += this.vy;
         this.alpha -= this.decay;
     }
-
     draw() {
         ctx.save();
         ctx.globalAlpha = this.alpha;
@@ -159,7 +158,7 @@ class PixelParticle {
     }
 }
 
-class PixelZombie {
+class RetroCubeZombie {
     constructor(waveNumber) {
         const edges = ['top', 'bottom', 'left', 'right'];
         const chosenEdge = edges[Math.floor(Math.random() * edges.length)];
@@ -170,23 +169,20 @@ class PixelZombie {
         else { this.x = canvas.width + 30; this.y = Math.random() * canvas.height; }
 
         this.size = 24;
-        this.health = 20 + (waveNumber * 5);
-        this.speed = 1.2 + Math.min(waveNumber * 0.15, 2.0);
+        this.health = 20 + (waveNumber * 6);
+        this.speed = 1.3 + Math.min(waveNumber * 0.15, 2.3);
         this.angle = 0;
     }
-
     update() {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
-
         if (dist !== 0) {
             this.angle = Math.atan2(dy, dx);
             this.x += (dx / dist) * this.speed;
             this.y += (dy / dist) * this.speed;
         }
     }
-
     draw() {
         ctx.save();
         ctx.translate(Math.floor(this.x), Math.floor(this.y));
@@ -197,21 +193,21 @@ class PixelZombie {
         ctx.fillRect(-14, -14, 28, 28);
 
         // 2. Thick Green Outline
-        ctx.fillStyle = "#27ae60"; 
+        ctx.fillStyle = "#33ff33"; 
         ctx.fillRect(-12, -12, 24, 24);
 
         // 3. Dark interior fill to leave the green border visible (Cube Style)
-        ctx.fillStyle = "#1c2833";
+        ctx.fillStyle = "#0c140c";
         ctx.fillRect(-9, -9, 18, 18); 
 
         // 4. Black Scars running through the cube
         ctx.fillStyle = "#000000";
-        ctx.fillRect(-5, -5, 10, 2);  // Scar 1
-        ctx.fillRect(2, -2, 2, 8);    // Scar 2
-        ctx.fillRect(-7, 3, 6, 2);    // Scar 3
+        ctx.fillRect(-5, -5, 10, 2);  
+        ctx.fillRect(2, -2, 2, 8);    
+        ctx.fillRect(-7, 3, 6, 2);    
 
-        // 5. Glowing Red Eyes
-        ctx.fillStyle = "#ff0000";
+        // 5. Glowing Neon Red Eyes
+        ctx.fillStyle = "#ff3333";
         ctx.fillRect(2, -6, 4, 4);
         ctx.fillRect(2, 2, 4, 4);
 
@@ -219,32 +215,27 @@ class PixelZombie {
     }
 }
 
-class PixelBullet {
+class RetroLaser {
     constructor(startX, startY, targetX, targetY) {
         this.x = startX;
         this.y = startY;
         this.size = 6;
-        this.speed = 14;
+        this.speed = 16;
         this.damage = 25;
-
         const dx = targetX - startX;
         const dy = targetY - startY;
         const dist = Math.hypot(dx, dy);
-
         this.dx = dist !== 0 ? (dx / dist) * this.speed : this.speed;
         this.dy = dist !== 0 ? (dy / dist) * this.speed : 0;
     }
-
     update() {
         this.x += this.dx;
         this.y += this.dy;
     }
-
     draw() {
         ctx.save();
-        ctx.fillStyle = "#d35400";
-        ctx.fillRect(Math.floor(this.x) - 2, Math.floor(this.y) - 2, this.size + 4, this.size + 4);
-        ctx.fillStyle = "#f1c40f";
+        // High-vis bright yellow-cyan beam block
+        ctx.fillStyle = "#00ffff";
         ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
         ctx.restore();
     }
@@ -257,17 +248,23 @@ function drawPlayer() {
     ctx.translate(Math.floor(player.x), Math.floor(player.y));
     ctx.rotate(angle);
 
-    // Player Outer Frame
+    // Outline
     ctx.fillStyle = "#000000";
     ctx.fillRect(-14, -14, 28, 28);
 
-    // Player Base Skin
-    ctx.fillStyle = "#3498db"; 
+    // Neon Cyan Retro Player Ship/Cube
+    ctx.fillStyle = "#00ffff"; 
     ctx.fillRect(-12, -12, 24, 24);
+    
+    // Core design detailing
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(-8, -8, 16, 16);
+    ctx.fillStyle = "#00ffff";
+    ctx.fillRect(-4, -4, 8, 8);
 
     // Blaster Barrel
-    ctx.fillStyle = "#7f8c8d";
-    ctx.fillRect(8, -4, 12, 8);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(8, -3, 12, 6);
 
     ctx.restore();
 }
@@ -282,7 +279,7 @@ function handlePlayerMovement() {
 
 function handleShooting(currentTime) {
     if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
-        bullets.push(new PixelBullet(player.x, player.y, mouse.x, mouse.y));
+        bullets.push(new RetroLaser(player.x, player.y, mouse.x, mouse.y));
         player.lastShotTime = currentTime;
     }
 }
@@ -290,29 +287,29 @@ function handleShooting(currentTime) {
 function spawnLogic(currentTime) {
     if (zombiesSpawned < zombiesToSpawn) {
         if (currentTime - lastSpawnTime >= spawnDelay) {
-            zombies.push(new PixelZombie(wave));
+            zombies.push(new RetroCubeZombie(wave));
             zombiesSpawned++;
             lastSpawnTime = currentTime;
         }
     }
-
     if (zombies.length === 0 && zombiesSpawned >= zombiesToSpawn) {
         wave++;
         zombiesToSpawn = wave * 6;
         zombiesSpawned = 0;
-        spawnDelay = Math.max(400, spawnDelay - 100);
+        spawnDelay = Math.max(350, spawnDelay - 120);
     }
 }
 
 function checkCollisions() {
-    // Bullets vs Zombies
+    // Laser vs Zombie Outbreak
     for (let b = bullets.length - 1; b >= 0; b--) {
         for (let z = zombies.length - 1; z >= 0; z--) {
             const dist = Math.hypot(bullets[b].x - zombies[z].x, bullets[b].y - zombies[z].y);
             if (dist < (bullets[b].size / 2 + zombies[z].size / 2)) {
                 
+                // Neon spark splash effects
                 for (let i = 0; i < 6; i++) {
-                    particles.push(new PixelParticle(zombies[z].x, zombies[z].y, "#c0392b"));
+                    particles.push(new RetroParticle(zombies[z].x, zombies[z].y, "#ff3333"));
                 }
                 
                 zombies[z].health -= bullets[b].damage;
@@ -320,7 +317,7 @@ function checkCollisions() {
 
                 if (zombies[z].health <= 0) {
                     for (let i = 0; i < 12; i++) {
-                        particles.push(new PixelParticle(zombies[z].x, zombies[z].y, "#7b241c"));
+                        particles.push(new RetroParticle(zombies[z].x, zombies[z].y, "#33ff33"));
                     }
                     zombies.splice(z, 1);
                     player.kills++;
@@ -330,16 +327,16 @@ function checkCollisions() {
         }
     }
 
-    // Zombies vs Player
+    // Zombie vs Player Ingress
     for (let z = zombies.length - 1; z >= 0; z--) {
         const dist = Math.hypot(player.x - zombies[z].x, player.y - zombies[z].y);
         if (dist < (player.size / 2 + zombies[z].size / 2)) {
-            player.health -= 0.5;
+            player.health -= 0.6; // Consistent scaling damage track
             
-            if (Math.random() > 0.85) {
-                particles.push(new PixelParticle(player.x, player.y, "#ff3333"));
+            // Cyber damage glitch bits
+            if (Math.random() > 0.8) {
+                particles.push(new RetroParticle(player.x, player.y, "#00ffff"));
             }
-
             if (player.health <= 0) {
                 player.health = 0;
                 gameOver = true;
@@ -349,12 +346,22 @@ function checkCollisions() {
 }
 
 function updateUI() {
-    hud.innerHTML = `
-        WAVE: ${wave}<br>
-        KILLS: ${player.kills}
-    `;
-    // Update the visual health bar width dynamically
+    hud.innerHTML = `SYSTEM WAVE: 0${wave}<br>THREATS DOWN: ${player.kills}`;
+    
+    // Update structural width sizing
     healthBar.style.width = `${Math.max(0, player.health)}%`;
+    
+    // Dynamic Retro Color Swapping based on critically low systems
+    if (player.health > 45) {
+        healthBar.style.backgroundColor = "#33ff33";
+        healthBar.style.boxShadow = "0 0 8px #33ff33";
+    } else if (player.health > 20) {
+        healthBar.style.backgroundColor = "#ffcc00";
+        healthBar.style.boxShadow = "0 0 8px #ffcc00";
+    } else {
+        healthBar.style.backgroundColor = "#ff3333";
+        healthBar.style.boxShadow = "0 0 8px #ff3333";
+    }
 }
 
 function resetGame() {
@@ -363,9 +370,9 @@ function resetGame() {
     player.health = 100;
     player.kills = 0;
     wave = 1;
-    zombiesToSpawn = 5;
+    zombiesToSpawn = 6;
     zombiesSpawned = 0;
-    spawnDelay = 1200;
+    spawnDelay = 1000;
     zombies = [];
     bullets = [];
     particles = [];
@@ -373,7 +380,8 @@ function resetGame() {
 }
 
 function loop(timestamp) {
-    ctx.fillStyle = "rgba(17, 20, 26, 0.3)";
+    // Retro motion blur trail frame clear
+    ctx.fillStyle = "rgba(5, 8, 12, 0.35)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (!gameOver) {
@@ -382,7 +390,7 @@ function loop(timestamp) {
         spawnLogic(timestamp);
         checkCollisions();
 
-        // Projectiles
+        // Laser Tracking
         for (let i = bullets.length - 1; i >= 0; i--) {
             bullets[i].update();
             bullets[i].draw();
@@ -391,7 +399,7 @@ function loop(timestamp) {
             }
         }
 
-        // Hostile Cube Units
+        // Zombie Engine Processing
         zombies.forEach(zombie => {
             zombie.update();
             zombie.draw();
@@ -399,33 +407,33 @@ function loop(timestamp) {
 
         drawPlayer();
     } else {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        // Neon Game Over Terminal Matrix
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        ctx.font = "bold 44px 'Courier New'";
-        ctx.fillStyle = "#c0392b";
+        ctx.font = "bold 40px 'Courier New'";
+        ctx.fillStyle = "#ff3333";
         ctx.textAlign = "center";
-        ctx.fillText("YOU WERE CONSUMED", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillText("CRITICAL SYSTEM FAILURE", canvas.width / 2, canvas.height / 2 - 20);
         
-        ctx.font = "20px 'Courier New'";
-        ctx.fillStyle = "#bdc3c7";
-        ctx.fillText(`YOU SURVIVED ${wave} WAVES AND KILLED ${player.kills} CUBES`, canvas.width / 2, canvas.height / 2 + 30);
-        ctx.fillText("PRESS 'R' TO RESURRECT", canvas.width / 2, canvas.height / 2 + 70);
+        ctx.font = "18px 'Courier New'";
+        ctx.fillStyle = "#33ff33";
+        ctx.fillText(`WAVES DEPLOYED: 0${wave}  |  CUBES TERMINATED: ${player.kills}`, canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText("PRESS [R] TO REBOOT AND RETRY", canvas.width / 2, canvas.height / 2 + 70);
     }
 
-    // VFX Particles
+    // Processing Matrix Vector Particles
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update();
         particles[i].draw();
-        if (particles[i].alpha <= 0) {
-            particles.splice(i, 1);
-        }
+        if (particles[i].alpha <= 0) particles.splice(i, 1);
     }
 
     updateUI();
     requestAnimationFrame(loop);
 }
 
+// Global initialization sequence
 requestAnimationFrame(loop);
 </script>
 </body>
