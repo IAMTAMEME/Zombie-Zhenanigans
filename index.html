@@ -19,123 +19,7 @@
             padding: 20px;
         }
 
-        /* Main shop grid system container */
-        #gun-shop-panel {
-            background: #12161a;
-            border: 2px solid #2a343d;
-            border-radius: 8px;
-            padding: 15px;
-            width: 340px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-        }
-
-        .shop-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #ff4a4a;
-            padding-bottom: 8px;
-        }
-
-        .shop-title {
-            font-weight: bold;
-            font-size: 14px;
-            color: #ff4a4a;
-        }
-
-        .currency-display {
-            font-size: 13px;
-            color: #ffd700;
-            font-weight: bold;
-        }
-
-        .threat-ticker {
-            font-size: 11px;
-            background: rgba(255, 74, 74, 0.1);
-            color: #ff8888;
-            text-align: center;
-            padding: 6px;
-            margin: 10px 0;
-            border-radius: 4px;
-            border: 1px dashed rgba(255, 74, 74, 0.3);
-        }
-
-        .shop-item {
-            display: flex;
-            align-items: center;
-            background: #1a2129;
-            border: 1px solid #2d3845;
-            border-radius: 6px;
-            padding: 10px;
-            margin-bottom: 8px;
-            transition: all 0.2s ease;
-        }
-
-        .shop-item.unlocked-item {
-            border-color: #44566b;
-            background: #1d2630;
-        }
-
-        .weapon-icon {
-            font-size: 20px;
-            margin-right: 12px;
-        }
-
-        .shop-item-info {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
-        .weapon-name {
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        .weapon-meta {
-            font-size: 11px;
-            color: #8898a6;
-            margin-top: 2px;
-        }
-
-        .shop-btn {
-            border: none;
-            padding: 8px 10px;
-            font-size: 10px;
-            font-weight: bold;
-            font-family: inherit;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 90px;
-            text-align: center;
-            transition: all 0.15s;
-        }
-
-        /* Functional state classes mapped via javascript */
-        .shop-btn.locked {
-            background: #2d353f;
-            color: #5f758a;
-            cursor: not-allowed;
-        }
-
-        .shop-btn.affordable {
-            background: #00ff66;
-            color: #052e14;
-        }
-
-        .shop-btn.affordable:hover {
-            background: #33ff85;
-            box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
-        }
-
-        .shop-btn.expensive {
-            background: #4a2323;
-            color: #ff8888;
-            cursor: not-allowed;
-        }
-
-        /* Debug / Control Panel block below the shop */
+        /* Debug / Control Panel block */
         .dev-panel {
             background: #1c1c1f;
             border: 1px solid #333;
@@ -174,7 +58,7 @@
             border: 1px solid #222;
             padding: 6px;
             font-size: 11px;
-            height: 60px;
+            height: 120px; /* Expanded slightly to emphasize logs */
             overflow-y: auto;
             color: #00ff66;
             border-radius: 4px;
@@ -183,46 +67,7 @@
 </head>
 <body>
 
-    <!-- Main Live Gun Shop Layout Block -->
-    <div id="gun-shop-panel">
-        <div class="shop-header">
-            <span class="shop-title">🚨 ARMORY & DEFENSE</span>
-            <div class="currency-display">Scrap: <span id="scrap-count">0</span></div>
-        </div>
-        
-        <div class="threat-ticker">
-            MUTANT SECTOR THREAT: <span id="threat-wave">WAVE 1</span>
-        </div>
-        
-        <div class="shop-item" id="item-Shotgun">
-            <div class="weapon-icon">💥</div>
-            <div class="shop-item-info">
-                <span class="weapon-name">Pump Shotgun</span>
-                <span class="weapon-meta" id="cost-shotgun">Unlocks at Wave 10</span>
-            </div>
-            <button class="shop-btn locked" id="btn-shotgun" onclick="buyWeapon('Shotgun')" disabled>Locked</button>
-        </div>
-
-        <div class="shop-item" id="item-Rifle">
-            <div class="weapon-icon">🔫</div>
-            <div class="shop-item-info">
-                <span class="weapon-name">Assault Rifle</span>
-                <span class="weapon-meta" id="cost-rifle">Unlocks at Wave 20</span>
-            </div>
-            <button class="shop-btn locked" id="btn-rifle" onclick="buyWeapon('Rifle')" disabled>Locked</button>
-        </div>
-
-        <div class="shop-item" id="item-Minigun">
-            <div class="weapon-icon">⚡</div>
-            <div class="shop-item-info">
-                <span class="weapon-name">Laser Minigun</span>
-                <span class="weapon-meta" id="cost-minigun">Unlocks at Wave 30</span>
-            </div>
-            <button class="shop-btn locked" id="btn-minigun" onclick="buyWeapon('Minigun')" disabled>Locked</button>
-        </div>
-    </div>
-
-    <!-- Simulator Controller (To test out your shop mechanics directly) -->
+    <!-- Simulator Controller Terminal -->
     <div class="dev-panel">
         <div class="dev-title">Simulation Testing Module</div>
         <div class="dev-buttons">
@@ -230,7 +75,7 @@
             <button class="dev-btn" onclick="adjustWave(10)">+10 Waves</button>
             <button class="dev-btn" onclick="addScrap(50)">+50 Scrap</button>
         </div>
-        <div class="log-display" id="log-console">System Online. Click simulation buttons to clear waves and gain Scrap.</div>
+        <div class="log-display" id="log-console">System Online. Core simulation running. Shop interface disabled.</div>
     </div>
 
     <script>
@@ -246,93 +91,42 @@
             30: { name: "Apex Leviathan", hp: 2200, desc: "The final catastrophic biomechanical weapon asset." }
         };
 
-        // Static Balance Configurations
-        const weaponsConfig = {
-            'Shotgun': { unlockWave: 10, cost: 50, btnId: 'btn-shotgun', costId: 'cost-shotgun' },
-            'Rifle':   { unlockWave: 20, cost: 120, btnId: 'btn-rifle', costId: 'cost-rifle' },
-            'Minigun': { unlockWave: 30, cost: 300, btnId: 'btn-minigun', costId: 'cost-minigun' }
-        };
-
-        // Renders changes immediately on the UI layouts
-        function updateArmoryUI() {
-            document.getElementById('scrap-count').textContent = scrap;
-            document.getElementById('threat-wave').textContent = `WAVE ${currentWave}`;
-
-            for (const [name, data] of Object.entries(weaponsConfig)) {
-                const btn = document.getElementById(data.btnId);
-                const metaSpan = document.getElementById(data.costId);
-                const row = document.getElementById(`item-${name}`);
-
-                if (currentWave >= data.unlockWave) {
-                    row.classList.add('unlocked-item');
-                    metaSpan.textContent = `Cost: ${data.cost} Scrap`;
-                    metaSpan.style.color = '#ffd700'; 
-
-                    if (scrap >= data.cost) {
-                        btn.textContent = "PURCHASE";
-                        btn.className = "shop-btn affordable";
-                        btn.disabled = false;
-                    } else {
-                        btn.textContent = "LOW FUNDS";
-                        btn.className = "shop-btn expensive";
-                        btn.disabled = true;
-                    }
-                } else {
-                    row.classList.remove('unlocked-item');
-                    metaSpan.textContent = `Req: Wave ${data.unlockWave}`;
-                    metaSpan.style.color = '#8898a6';
-                    btn.textContent = "LOCKED";
-                    btn.className = "shop-btn locked";
-                    btn.disabled = true;
-                }
-            }
+        // State update routine for headless engine
+        function updateUI() {
+            // Log core telemetry values quietly to system variables
+            console.log(`Current Telemetry - Wave: ${currentWave} | Scrap Pool: ${scrap}`);
         }
 
-        // Functional click actions handled down here
-        function buyWeapon(weaponName) {
-            const weapon = weaponsConfig[weaponName];
-            
-            if (currentWave >= weapon.unlockWave && scrap >= weapon.cost) {
-                scrap -= weapon.cost;
-                logMessage(`[ARMORY] Dispatched hardware: ${weaponName}!`);
-                updateArmoryUI(); 
-            }
-        }
-
-        // Logic framework identifying which tier of mutant spawns
-        function checkActiveMutantThreat() {
-            let activeThreat = mutantRegistry[1]; 
-            
-            for (let waveReq in mutantRegistry) {
-                if (currentWave >= parseInt(waveReq)) {
-                    activeThreat = mutantRegistry[waveReq];
-                }
-            }
-            return activeThreat;
-        }
-
-        // Helper adjustments for the UI visual tester panels
+        // Sim Handler: Advance wave ticks
         function adjustWave(amount) {
             currentWave += amount;
-            const threat = checkActiveMutantThreat();
-            logMessage(`[DEPLOY] Wave ${currentWave}: Spawned ${threat.name} (HP: ${threat.hp}).`);
-            updateArmoryUI();
+            logMessage(`Advanced to Wave ${currentWave}.`);
+            
+            // Check for new mutant announcements
+            if (mutantRegistry[currentWave]) {
+                const mutant = mutantRegistry[currentWave];
+                logMessage(`🚨 ALERT: New Enemy Detected! [${mutant.name}] HP: ${mutant.hp} - ${mutant.desc}`);
+            }
+            
+            updateUI();
         }
 
+        // Sim Handler: Add scrap currency
         function addScrap(amount) {
             scrap += amount;
-            logMessage(`[SALVAGE] Recovered +${amount} scrap components.`);
-            updateArmoryUI();
+            logMessage(`Salvaged +${amount} scrap metal. Total: ${scrap}`);
+            updateUI();
         }
 
-        function logMessage(msg) {
+        // Visual Console logger helper
+        function logMessage(text) {
             const consoleBox = document.getElementById('log-console');
-            consoleBox.innerHTML = msg;
+            consoleBox.innerHTML += `<br>> ${text}`;
             consoleBox.scrollTop = consoleBox.scrollHeight;
         }
 
-        // Run updates on layout load initialization 
-        updateArmoryUI();
+        // Initialize state
+        updateUI();
     </script>
 </body>
 </html>
