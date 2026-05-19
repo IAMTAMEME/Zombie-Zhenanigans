@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Survival</title>
+    <title>Zombie Survival - Fixed Edition</title>
     <style>
         body {
             margin: 0;
@@ -28,7 +28,6 @@
             display: block;
             cursor: crosshair;
         }
-        /* Separated and organized HUD items */
         #hud-left {
             position: absolute;
             top: 20px;
@@ -37,26 +36,18 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            user-select: none;
         }
         .hud-item {
             font-size: 18px;
             font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
             letter-spacing: 0.5px;
         }
-        #wave-display {
-            color: #f1c40f; /* Distinct gold color for waves */
-            font-size: 22px;
-        }
-        #kills-display {
-            color: #ff4d4d; /* Distinct red color for kills */
-        }
-        #food-display {
-            color: #2ecc71; /* Distinct green color for currency */
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        #wave-display { color: #f1c40f; font-size: 22px; }
+        #kills-display { color: #ff4d4d; }
+        #food-display { color: #2ecc71; }
+        
         #health-container {
             position: absolute;
             top: 20px;
@@ -75,7 +66,7 @@
             height: 100%;
             background-color: #2ecc71; 
             border-radius: 20px;
-            transition: width 0.15s cubic-bezier(0.1, 0.8, 0.3, 1);
+            transition: width 0.1s linear;
         }
         #instructions {
             margin-top: 20px;
@@ -107,13 +98,13 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// UI Elements
+// Grab and verify DOM components securely
 const waveDisplay = document.getElementById("wave-display");
 const killsDisplay = document.getElementById("kills-display");
 const foodDisplay = document.getElementById("food-display");
 const healthBar = document.getElementById("health-bar");
 
-// Game Engine Parameters
+// Core Setup State
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
@@ -131,7 +122,7 @@ let mouse = { x: 0, y: 0, isPressed: false };
 let zombies = [];
 let bullets = [];
 let particles = [];
-let items = []; // Drop system array
+let items = []; 
 let wave = 1;
 let zombiesToSpawn = 6;
 let zombiesSpawned = 0;
@@ -139,12 +130,14 @@ let lastSpawnTime = 0;
 let spawnDelay = 900;
 let gameOver = false;
 
-// Event Tracking Systems
+// Global Event Window Mapping
 window.addEventListener("keydown", (e) => {
-    keys[e.key.toLowerCase()] = true;
-    if (gameOver && e.key.toLowerCase() === 'r') resetGame();
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+    if (gameOver && key === 'r') resetGame();
 });
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+
 canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
@@ -153,8 +146,8 @@ canvas.addEventListener("mousemove", (e) => {
 canvas.addEventListener("mousedown", () => mouse.isPressed = true);
 canvas.addEventListener("mouseup", () => mouse.isPressed = false);
 
-// Component Structuring Classes
-class BloodParticle {
+// Logic Classes
+class SplatParticle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
@@ -176,7 +169,7 @@ class BloodParticle {
     }
     draw() {
         ctx.save();
-        ctx.globalAlpha = this.alpha;
+        ctx.globalAlpha = Math.max(0, this.alpha);
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -191,7 +184,8 @@ class FoodCanItem {
         this.y = y;
         this.width = 10;
         this.height = 14;
-        this.bounceTimer = Math.random() * 100; // Offset for smooth floating animation
+        this.bounceTimer = Math.random() * 100;
+        this.markedForDelete = false;
     }
     draw() {
         this.bounceTimer += 0.05;
@@ -199,19 +193,15 @@ class FoodCanItem {
 
         ctx.save();
         ctx.translate(this.x, this.y + bounceOffsetY);
-
-        // Modern, clean flat vector representation of a can
-        ctx.fillStyle = "#bdc3c7"; // Tin color base
+        ctx.fillStyle = "#bdc3c7"; 
         ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
-        
-        ctx.fillStyle = "#e74c3c"; // Mid label accent
+        ctx.fillStyle = "#e74c3c"; 
         ctx.fillRect(-this.width/2, -this.height/6, this.width, this.height/3);
-
         ctx.restore();
     }
 }
 
-class ModernZombie {
+class LivingZombie {
     constructor() {
         const borderDist = 30;
         const edgeChoice = Math.floor(Math.random() * 4);
@@ -224,6 +214,7 @@ class ModernZombie {
         this.radius = 11;
         this.health = 25 + (wave * 5);
         this.speed = 1.6 + Math.min(wave * 0.1, 1.4);
+        this.markedForDelete = false;
     }
     update() {
         const dx = player.x - this.x;
@@ -241,22 +232,23 @@ class ModernZombie {
         ctx.fill();
 
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        
         ctx.fillStyle = "#e74c3c";
         ctx.beginPath();
-        ctx.arc(this.x + Math.cos(angle + 0.35) * 6, this.y + Math.sin(angle + 0.35) * 6, 2, 0, Math.PI * 2);
-        ctx.arc(this.x + Math.cos(angle - 0.35) * 6, this.y + Math.sin(angle - 0.35) * 6, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + Math.cos(angle + 0.35) * 5, this.y + Math.sin(angle + 0.35) * 5, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + Math.cos(angle - 0.35) * 5, this.y + Math.sin(angle - 0.35) * 5, 2, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-class ModernBullet {
+class SimpleBullet {
     constructor(startX, startY, targetX, targetY) {
         this.x = startX;
         this.y = startY;
         this.radius = 2.5;
         this.speed = 14;
         this.damage = 25;
+        this.markedForDelete = false;
+        
         const dx = targetX - startX;
         const dy = targetY - startY;
         const dist = Math.hypot(dx, dy);
@@ -266,6 +258,11 @@ class ModernBullet {
     update() {
         this.x += this.dx;
         this.y += this.dy;
+        
+        // Out of bounds cleanup flag
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+            this.markedForDelete = true;
+        }
     }
     draw() {
         ctx.fillStyle = "#f1c40f"; 
@@ -275,7 +272,7 @@ class ModernBullet {
     }
 }
 
-// Logic Pipelines
+// Logic Engines
 function drawPlayer() {
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     
@@ -290,7 +287,6 @@ function drawPlayer() {
 
     ctx.fillStyle = "#555555";
     ctx.fillRect(4, -2.5, 12, 5);
-
     ctx.restore();
 }
 
@@ -314,7 +310,7 @@ function handleMovement() {
 
 function handleShooting(currentTime) {
     if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
-        bullets.push(new ModernBullet(player.x, player.y, mouse.x, mouse.y));
+        bullets.push(new SimpleBullet(player.x, player.y, mouse.x, mouse.y));
         player.lastShotTime = currentTime;
     }
 }
@@ -322,7 +318,7 @@ function handleShooting(currentTime) {
 function spawnLogic(currentTime) {
     if (zombiesSpawned < zombiesToSpawn) {
         if (currentTime - lastSpawnTime >= spawnDelay) {
-            zombies.push(new ModernZombie());
+            zombies.push(new LivingZombie());
             zombiesSpawned++;
             lastSpawnTime = currentTime;
         }
@@ -336,46 +332,47 @@ function spawnLogic(currentTime) {
 }
 
 function checkCollisions() {
-    // Bullet / Zombie collisions
-    for (let b = bullets.length - 1; b >= 0; b--) {
-        for (let z = zombies.length - 1; z >= 0; z--) {
-            const dist = Math.hypot(bullets[b].x - zombies[z].x, bullets[b].y - zombies[z].y);
-            if (dist < (bullets[b].radius + zombies[z].radius)) {
+    // 1. Bullets vs Zombies
+    for (let bullet of bullets) {
+        if (bullet.markedForDelete) continue;
+        for (let zombie of zombies) {
+            if (zombie.markedForDelete) continue;
+            
+            const dist = Math.hypot(bullet.x - zombie.x, bullet.y - zombie.y);
+            if (dist < (bullet.radius + zombie.radius)) {
+                bullet.markedForDelete = true;
+                zombie.health -= bullet.damage;
                 
-                for (let i = 0; i < 5; i++) {
-                    particles.push(new BloodParticle(zombies[z].x, zombies[z].y, "#c0392b"));
+                for (let i = 0; i < 4; i++) {
+                    particles.push(new SplatParticle(zombie.x, zombie.y, "#c0392b"));
                 }
-                
-                zombies[z].health -= bullets[b].damage;
-                bullets.splice(b, 1);
 
-                if (zombies[z].health <= 0) {
-                    // 40% chance to drop a food can currency item upon death
-                    if (Math.random() < 0.40) {
-                        items.push(new FoodCanItem(zombies[z].x, zombies[z].y));
-                    }
-                    zombies.splice(z, 1);
+                if (zombie.health <= 0) {
+                    zombie.markedForDelete = true;
                     player.kills++;
+                    if (Math.random() < 0.40) {
+                        items.push(new FoodCanItem(zombie.x, zombie.y));
+                    }
                 }
-                break;
+                break; 
             }
         }
     }
 
-    // Item Collection processing loop
-    for (let i = items.length - 1; i >= 0; i--) {
-        const dist = Math.hypot(player.x - items[i].x, player.y - items[i].y);
-        // Collision boundary check for item picking
-        if (dist < (player.radius + items[i].width)) {
+    // 2. Player vs Food Cans
+    for (let item of items) {
+        const dist = Math.hypot(player.x - item.x, player.y - item.y);
+        if (dist < (player.radius + item.width)) {
+            item.markedForDelete = true;
             player.foodCans++;
-            items.splice(i, 1);
         }
     }
 
-    // Zombie / Player collision
-    for (let z = zombies.length - 1; z >= 0; z--) {
-        const dist = Math.hypot(player.x - zombies[z].x, player.y - zombies[z].y);
-        if (dist < (player.radius + zombies[z].radius)) {
+    // 3. Zombies vs Player
+    for (let zombie of zombies) {
+        if (zombie.markedForDelete) continue;
+        const dist = Math.hypot(player.x - zombie.x, player.y - zombie.y);
+        if (dist < (player.radius + zombie.radius)) {
             player.health -= 0.5;
             if (player.health <= 0) {
                 player.health = 0;
@@ -383,18 +380,24 @@ function checkCollisions() {
             }
         }
     }
+
+    // Safe memory flush cleanup via filtering out marked instances
+    bullets = bullets.filter(b => !b.markedForDelete);
+    zombies = zombies.filter(z => !z.markedForDelete);
+    items = items.filter(i => !i.markedForDelete);
 }
 
 function updateUI() {
-    waveDisplay.innerText = `Wave: ${wave}`;
-    killsDisplay.innerText = `Kills: ${player.kills}`;
-    foodDisplay.innerText = `Food Cans: ${player.foodCans}`;
+    if (waveDisplay) waveDisplay.innerText = `Wave: ${wave}`;
+    if (killsDisplay) killsDisplay.innerText = `Kills: ${player.kills}`;
+    if (foodDisplay) foodDisplay.innerText = `Food Cans: ${player.foodCans}`;
     
-    healthBar.style.width = `${player.health}%`;
-    
-    if (player.health > 50) healthBar.style.backgroundColor = "#2ecc71";
-    else if (player.health > 25) healthBar.style.backgroundColor = "#e67e22";
-    else healthBar.style.backgroundColor = "#e74c3c";
+    if (healthBar) {
+        healthBar.style.width = `${player.health}%`;
+        if (player.health > 50) healthBar.style.backgroundColor = "#2ecc71";
+        else if (player.health > 25) healthBar.style.backgroundColor = "#e67e22";
+        else healthBar.style.backgroundColor = "#e74c3c";
+    }
 }
 
 function resetGame() {
@@ -422,24 +425,10 @@ function loop(timestamp) {
         spawnLogic(timestamp);
         checkCollisions();
 
-        // Items rendering
+        // Object pipelines execution tracking
         items.forEach(item => item.draw());
-
-        // Render Bullets
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            bullets[i].update();
-            bullets[i].draw();
-            if (bullets[i].x < 0 || bullets[i].x > canvas.width || bullets[i].y < 0 || bullets[i].y > canvas.height) {
-                bullets.splice(i, 1);
-            }
-        }
-
-        // Render Zombies
-        zombies.forEach(zombie => {
-            zombie.update();
-            zombie.draw();
-        });
-
+        bullets.forEach(bullet => { bullet.update(); bullet.draw(); });
+        zombies.forEach(zombie => { zombie.update(); zombie.draw(); });
         drawPlayer();
     } else {
         ctx.fillStyle = "rgba(20, 20, 20, 0.85)";
@@ -458,7 +447,7 @@ function loop(timestamp) {
         ctx.fillText("Press 'R' to play again", canvas.width / 2, canvas.height / 2 + 110);
     }
 
-    // Particle Handling Animation
+    // Particle FX rendering
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update();
         particles[i].draw();
@@ -469,6 +458,7 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 
+// Fire up core initialization
 requestAnimationFrame(loop);
 </script>
 </body>
