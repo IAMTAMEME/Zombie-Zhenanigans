@@ -35,7 +35,7 @@
 
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="instructions">
-        <strong>WASD</strong> to Move | <strong>Left Click & Hold</strong> to Shoot | 0.5s Cooldown active
+        <strong>WASD / Arrows</strong> to Move | <strong>Left Click & Hold</strong> to Shoot | <strong>R</strong> to Restart
     </div>
 
 <script>
@@ -259,6 +259,22 @@ function drawPlayer() {
     ctx.fillRect(player.x - 20, player.y - 25, 40 * (player.health / 100), 6);
 }
 
+function drawGameOver() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#c83232";
+    ctx.font = "50px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText(`You survived to Wave ${wave} and collected ${player.foodCans} cans!`, canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText("Press 'R' to Restart", canvas.width / 2, canvas.height / 2 + 60);
+    ctx.textAlign = "left"; // Reset text align for HUD
+}
+
 // Master Loop
 function gameLoop() {
     const currentTime = performance.now();
@@ -272,31 +288,28 @@ function gameLoop() {
 
         // Update active entities and safely clean up offscreen bullets
         bullets = bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
-        bullets.forEach(b => { b.update(); b.draw(); });
         
-        zombies.forEach(z => { z.update(); z.draw(); });
-        
+        bullets.forEach(bullet => {
+            bullet.update();
+            bullet.draw();
+        });
+
+        zombies.forEach(zombie => {
+            zombie.update();
+            zombie.draw();
+        });
+
         drawPlayer();
         drawHUD();
     } else {
-        // End Screen UI text overlay
-        ctx.fillStyle = "#c83232";
-        ctx.font = "48px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
-        
-        ctx.fillStyle = "white";
-        ctx.font = "24px Arial";
-        ctx.fillText("Press 'R' to Restart Zombie Zhenanigans", canvas.width / 2, canvas.height / 2 + 30);
-        ctx.textAlign = "left"; // Reset positioning alignment
+        drawGameOver();
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-// Start Game Initialization
+// Initialize Game
 gameLoop();
 </script>
 </body>
 </html>
-
