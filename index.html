@@ -59,7 +59,6 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); 
             cursor: crosshair; 
         } 
-        /* Shop Sidebar Styles */
         #shop-panel {
             width: 220px;
             background: #222;
@@ -161,7 +160,7 @@
 </head> 
 <body> 
     <div id="ui"> 
-        <div>ZOMBIE ZHENGANINZANS</div> 
+        <div>ZOMBIE ZHENANIGANS</div> 
         <div style="display: flex; align-items: center;"> 
             <span class="hp-label">HP:</span> 
             <div id="health-container"><div id="health-bar"></div></div> 
@@ -173,7 +172,6 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas> 
 
-        <!-- Side Shop UI -->
         <div id="shop-panel">
             <div class="shop-title">🥫 SURVIVAL SHOP</div>
             
@@ -223,14 +221,14 @@
         let foodCans = 0; 
         let gameOver = false; 
 
-        // Upgrade Costs and Tracks
+        // Upgrade Management
         let shootCooldown = 500; 
         let lastShootTime = 0; 
-        
         let costs = { hp: 5, speed: 8, firerate: 10 };
 
         let currentWave = 0; 
         let waveState = "READY_TO_START"; 
+        let waveTimer = 0;
 
         let lastHitTime = 0; 
         const hitCooldown = 400; 
@@ -244,255 +242,268 @@
             mouse.y = e.clientY - rect.top; 
         }); 
 
-        // Block canvas shooting when clicking inside the shop area
         canvas.addEventListener("mousedown", () => isMouseDown = true); 
         window.addEventListener("mouseup", () => isMouseDown = false); 
 
         function shoot() { 
             const currentTime = performance.now(); 
-            if (currentTime - lastShootTime >= shootCooldown) { 
-                let dx = mouse.x - player.x; 
-                let dy = mouse.y - player.y; 
-                let angle = Math.atan2(dy, dx); 
-                bullets.push({ 
-                    x: player.x, 
-                    y: player.y, 
-                    vx: Math.cos(angle) * 8, 
-                    vy: Math.sin(angle) * 8, 
-                    size: 4 
-                }); 
-                lastShootTime = currentTime; 
-            } 
+            if (currentTime - lastShootTime >= shootCooldown) {
+                const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+                bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(angle) * 8,
+                    vy: Math.sin(angle) * 8,
+                    size: 4
+                });
+                lastShootTime = currentTime;
+            }
         } 
 
-        // Shop purchase handling logic
-        function buyUpgrade(type) {
-            if (foodCans < costs[type] || gameOver) return;
+        function startWave() {
+            currentWave++;
+            waveEl.innerText = currentWave;
+            waveBanner.innerText = "WAVE " + currentWave;
+            waveBanner.style.opacity = 1;
+            waveState = "BANNER_DISPLAY";
+            waveTimer = performance.now();
 
-            foodCans -= costs[type];
-            foodCansEl.innerText = foodCans;
-
-            if (type === 'hp') {
-                player.maxHp += 10;
-                player.hp = Math.min(player.hp + 25, player.maxHp); // Heal slightly on upgrade
-                costs.hp = Math.floor(costs.hp * 1.5);
-                document.getElementById("cost-hp").innerText = `Cost: ${costs.hp}`;
-            } else if (type === 'speed') {
-                player.speed += 0.5;
-                costs.speed = Math.floor(costs.speed * 1.6);
-                document.getElementById("cost-speed").innerText = `Cost: ${costs.speed}`;
-            } else if (type === 'firerate') {
-                shootCooldown = Math.max(100, shootCooldown - 50); // Cap fire rate speed limit at 100ms
-                costs.firerate = Math.floor(costs.firerate * 1.8);
-                document.getElementById("cost-firerate").innerText = `Cost: ${costs.firerate}`;
-                if (shootCooldown <= 100) {
-                    document.getElementById("cost-firerate").innerText = "MAXED";
+            const spawnCount = 3 + currentWave * 2;
+            for (let i = 0; i < spawnCount; i++) {
+                let x, y;
+                if (Math.random() < 0.5) {
+                    x = Math.random() < 0.5 ? -40 : canvas.width + 40;
+                    y = Math.random() * canvas.height;
+                } else {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() < 0.5 ? -40 : canvas.height + 40;
                 }
+                
+                // Random scar paths uniquely applied per box instance
+                let scarOffset = Math.random() * 6 - 3;
+
+                zombies.push({
+                    x: x,
+                    y: y,
+                    speed: 1 + Math.random() * 0.8 + (currentWave * 0.1),
+                    hp: 10 + (currentWave * 5),
+                    size: 32, // Perfect diameter bounding square box size
+                    scarSeed: scarOffset
+                });
             }
-            updateShopButtons();
-            updateHealthBar();
         }
 
-        function updateShopButtons() {
+        // REPAIRED SHOP ENGINE FUNCTION
+        function buyUpgrade(type) {
+            if (foodCans >= costs[type]) {
+                foodCans -= costs[type];
+                foodCansEl.innerText = foodCans;
+
+                if (type === 'hp') {
+                    player.maxHp += 10;
+                    player.hp = Math.min(player.maxHp, player.hp + 10);
+                    costs.hp = Math.round(costs.hp * 1.5);
+                    document.getElementById("cost-hp").innerText = "Cost: " + costs.hp;
+                } else if (type === 'speed') {
+                    player.speed += 0.5;
+                    costs.speed = Math.round(costs.speed * 1.6);
+                    document.getElementById("cost-speed").innerText = "Cost: " + costs.speed;
+                } else if (type === 'firerate') {
+                    shootCooldown = Math.max(100, shootCooldown - 50);
+                    costs.firerate = Math.round(costs.firerate * 1.7);
+                    if (shootCooldown <= 100) {
+                        document.getElementById("cost-firerate").innerText = "MAXED";
+                    } else {
+                        document.getElementById("cost-firerate").innerText = "Cost: " + costs.firerate;
+                    }
+                }
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const healthPct = Math.max(0, (player.hp / player.maxHp) * 100);
+            healthBarEl.style.width = healthPct + "%";
+            
             document.getElementById("btn-hp").disabled = (foodCans < costs.hp);
             document.getElementById("btn-speed").disabled = (foodCans < costs.speed);
             document.getElementById("btn-firerate").disabled = (foodCans < costs.firerate || shootCooldown <= 100);
         }
 
-        function updateHealthBar() {
-            let percentage = (player.hp / player.maxHp) * 100;
-            healthBarEl.style.width = `${Math.max(0, percentage)}%`;
+        function resetGame() {
+            player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 }; 
+            bullets = []; 
+            zombies = []; 
+            foodCans = 0; 
+            shootCooldown = 500;
+            costs = { hp: 5, speed: 8, firerate: 10 };
+            currentWave = 0;
+            waveState = "READY_TO_START";
+            gameOver = false;
+            
+            foodCansEl.innerText = foodCans;
+            gameoverEl.style.display = "none";
+            document.getElementById("cost-hp").innerText = "Cost: 5";
+            document.getElementById("cost-speed").innerText = "Cost: 8";
+            document.getElementById("cost-firerate").innerText = "Cost: 10";
+            
+            updateUI();
         }
 
-        function startNextWave() { 
-            waveState = "SPAWNING"; 
-            currentWave++; 
-            waveEl.innerText = currentWave; 
-            waveBanner.innerText = `WAVE ${currentWave}`; 
-            waveBanner.style.opacity = "1"; 
+        function update() {
+            if (gameOver) return;
 
-            setTimeout(() => { 
-                if (gameOver) return; 
-                waveBanner.style.opacity = "0"; 
-                let zombieCount = currentWave * 3; 
-                for (let i = 0; i < zombieCount; i++) { 
-                    spawnZombie(); 
-                } 
-                waveState = "FIGHTING"; 
-            }, 2000); 
-        } 
+            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            if (isMouseDown) shoot();
 
-        function spawnZombie() { 
-            let x, y; 
-            if (Math.random() < 0.5) { 
-                x = Math.random() < 0.5 ? -30 : canvas.width + 30; 
-                y = Math.random() * canvas.height; 
-            } else { 
-                x = Math.random() * canvas.width; 
-                y = Math.random() < 0.5 ? -30 : canvas.height + 30; 
-            } 
-            let speedBonus = Math.min(1.0, currentWave * 0.08); 
-            zombies.push({ 
-                x: x, 
-                y: y, 
-                size: 16, 
-                speed: 0.8 + Math.random() + speedBonus, 
-                angle: 0 
-            }); 
-        } 
+            let dx = 0;
+            let dy = 0;
+            if (keys['w'] || keys['arrowup']) dy -= 1;
+            if (keys['s'] || keys['arrowdown']) dy += 1;
+            if (keys['a'] || keys['arrowleft']) dx -= 1;
+            if (keys['d'] || keys['arrowright']) dx += 1;
 
-        function update() { 
-            if (gameOver) return; 
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x + dx * player.speed));
+            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y + dy * player.speed));
 
-            if (zombies.length === 0 && waveState === "READY_TO_START") { 
-                startNextWave(); 
-            } 
-
-            // Handle active button triggers on dynamic point updates
-            updateShopButtons();
-
-            if (keys['w'] || keys['arrowup']) player.y -= player.speed; 
-            if (keys['s'] || keys['arrowdown']) player.y += player.speed; 
-            if (keys['a'] || keys['arrowleft']) player.x -= player.speed; 
-            if (keys['d'] || keys['arrowright']) player.x += player.speed; 
-
-            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x)); 
-            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y)); 
-            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x); 
-
-            if (isMouseDown && mouse.x >= 0 && mouse.x <= canvas.width && mouse.y >= 0 && mouse.y <= canvas.height) {
-                shoot();
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
             }
 
-            for (let i = bullets.length - 1; i >= 0; i--) { 
-                let b = bullets[i]; 
-                b.x += b.vx; 
-                b.y += b.vy; 
-                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) { 
-                    bullets.splice(i, 1); 
-                } 
-            } 
+            const now = performance.now();
+            if (waveState === "READY_TO_START") {
+                startWave();
+            } else if (waveState === "BANNER_DISPLAY" && now - waveTimer > 1500) {
+                waveBanner.style.opacity = 0;
+                waveState = "FIGHTING";
+            } else if (waveState === "FIGHTING" && zombies.length === 0) {
+                waveState = "READY_TO_START";
+            }
 
-            const currentTime = performance.now();
-            for (let i = zombies.length - 1; i >= 0; i--) { 
-                let z = zombies[i]; 
-                let dx = player.x - z.x; 
-                let dy = player.y - z.y; 
-                let dist = Math.hypot(dx, dy); 
+            for (let i = zombies.length - 1; i >= 0; i--) {
+                let z = zombies[i];
+                let zAngle = Math.atan2(player.y - z.y, player.x - z.x);
+                z.x += Math.cos(zAngle) * z.speed;
+                z.y += Math.sin(zAngle) * z.speed;
 
-                z.angle = Math.atan2(dy, dx);
-                z.x += (dx / dist) * z.speed; 
-                z.y += (dy / dist) * z.speed; 
-
-                if (dist < player.size + z.size) {
-                    if (currentTime - lastHitTime >= hitCooldown) {
-                        player.hp -= 10;
-                        lastHitTime = currentTime;
-                        updateHealthBar();
+                // Precision Bounding Calculation for New Box Model
+                let distToPlayer = Math.hypot(player.x - z.x, player.y - z.y);
+                if (distToPlayer < player.size + (z.size / 1.4)) {
+                    if (now - lastHitTime >= hitCooldown) {
+                        player.hp -= 15;
+                        lastHitTime = now;
+                        updateUI();
                         if (player.hp <= 0) {
-                            endGame();
+                            gameOver = true;
+                            gameoverEl.style.display = "block";
                         }
                     }
                 }
 
                 for (let j = bullets.length - 1; j >= 0; j--) {
                     let b = bullets[j];
-                    let bDx = b.x - z.x;
-                    let bDy = b.y - z.y;
-                    let bDist = Math.hypot(bDx, bDy);
-
-                    if (bDist < z.size + b.size) {
-                        zombies.splice(i, 1);
+                    let distToBullet = Math.hypot(b.x - z.x, b.y - z.y);
+                    if (distToBullet < (z.size / 1.4) + b.size) {
+                        z.hp -= 10;
                         bullets.splice(j, 1);
-                        foodCans += 1;
-                        foodCansEl.innerText = foodCans;
-                        break;
+                        if (z.hp <= 0) {
+                            zombies.splice(i, 1);
+                            foodCans++;
+                            foodCansEl.innerText = foodCans;
+                            break;
+                        }
                     }
                 }
-            } 
-
-            if (zombies.length === 0 && waveState === "FIGHTING") {
-                waveState = "READY_TO_START";
             }
-        } 
+            updateUI(); 
+        }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Bullets
+            ctx.fillStyle = "#ffcc00";
             bullets.forEach(b => {
                 ctx.beginPath();
                 ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-                ctx.fillStyle = "#ffcc00";
                 ctx.fill();
             });
 
-            zombies.forEach(z => {
-                ctx.save();
-                ctx.translate(z.x, z.y);
-                ctx.rotate(z.angle);
-                ctx.fillStyle = "#4d7c0f";
-                ctx.beginPath();
-                ctx.arc(0, 0, z.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = "#65a30d";
-                ctx.fillRect(5, -12, 10, 6);
-                ctx.fillRect(5, 6, 10, 6);
-                ctx.restore();
-            });
-
+            // Player
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.angle);
-            ctx.fillStyle = "#555";
-            ctx.fillRect(10, -4, 18, 8);
             ctx.fillStyle = "#0066ff";
             ctx.beginPath();
             ctx.arc(0, 0, player.size, 0, Math.PI * 2);
             ctx.fill();
+            ctx.fillStyle = "#333";
+            ctx.fillRect(0, -5, player.size + 10, 10);
             ctx.restore();
+
+            // FIXED: NEW CUBE ZOMBIE SPRITE ARCHITECTURE WITH GLOWING RED EYES & SCARS
+            zombies.forEach(z => {
+                ctx.save();
+                ctx.translate(z.x, z.y);
+                
+                // Track orientation towards the player
+                let faceAngle = Math.atan2(player.y - z.y, player.x - z.x);
+                ctx.rotate(faceAngle);
+
+                // 1. Draw Core Cube Base Body
+                ctx.fillStyle = "#557a46"; // Zombie Green
+                ctx.strokeStyle = "#38512f"; // Dark trim contour
+                ctx.lineWidth = 3;
+                ctx.fillRect(-z.size / 2, -z.size / 2, z.size, z.size);
+                ctx.strokeRect(-z.size / 2, -z.size / 2, z.size, z.size);
+
+                // 2. Draw Battle Scar Overlays
+                ctx.strokeStyle = "#990000"; // Deep blood red scar cuts
+                ctx.lineWidth = 2;
+                
+                // Slanted primary face scar
+                ctx.beginPath();
+                ctx.moveTo(-6 + z.scarSeed, -12);
+                ctx.lineTo(4 + z.scarSeed, -2);
+                ctx.stroke();
+
+                // Cross-hatch stitch details on scar
+                ctx.beginPath();
+                ctx.moveTo(-4 + z.scarSeed, -9); ctx.lineTo(-1 + z.scarSeed, -11);
+                ctx.moveTo(-1 + z.scarSeed, -5); ctx.lineTo(2 + z.scarSeed, -7);
+                ctx.stroke();
+
+                // 3. Draw 2 Angry Glowing Red Eyes
+                ctx.fillStyle = "#ff0000"; // Pure emissive red
+                ctx.shadowColor = "#ff0000";
+                ctx.shadowBlur = 6; // Glow radius effect
+
+                // Left Eye (oriented pointing forward right)
+                ctx.fillRect(4, -9, 5, 4);
+                // Right Eye
+                ctx.fillRect(4, 5, 5, 4);
+                
+                ctx.restore();
+            });
         }
 
-        function gameLoop() {
+        function loop() {
             update();
             draw();
-            if (!gameOver) {
-                requestAnimationFrame(gameLoop);
-            }
+            requestAnimationFrame(loop);
         }
 
-        function endGame() {
-            gameOver = true;
-            gameoverEl.style.display = "block";
-        }
-
-        function resetGame() {
-            player.maxHp = 100;
-            player.hp = 100;
-            player.x = 400;
-            player.y = 300;
-            player.speed = 4;
-            shootCooldown = 500;
-            
-            costs = { hp: 5, speed: 8, firerate: 10 };
-            document.getElementById("cost-hp").innerText = "Cost: 5";
-            document.getElementById("cost-speed").innerText = "Cost: 8";
-            document.getElementById("cost-firerate").innerText = "Cost: 10";
-
-            bullets = [];
-            zombies = [];
-            foodCans = 0;
-            currentWave = 0;
-            gameOver = false;
-            waveState = "READY_TO_START";
-            
-            foodCansEl.innerText = "0";
-            updateHealthBar();
-            gameoverEl.style.display = "none";
-            
-            gameLoop();
-        }
-
-        gameLoop();
-    </script> 
-</body> 
+        updateUI();
+        loop();
+    </script>
+</body>
 </html>
