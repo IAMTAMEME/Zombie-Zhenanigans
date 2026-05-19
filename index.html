@@ -1,1 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zombie Zhenanigans</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            border: 4px solid #333;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            cursor: crosshair;
+        }
+        #instructions {
+            margin-top: 15px;
+            color: #aaa;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="instructions">
+        <strong>WASD</strong> to Move | <strong>Left Click & Hold</strong> to Shoot | 0.5s Cooldown active
+    </div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Game State Variables
+let player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 15,
+    speed: 4,
+    health: 100,
+    foodCans: 0,
+    lastShotTime: 0,
+    shootCooldown: 500 // 0.5 seconds in milliseconds
+};
+
+let keys = {};
+let mouse = { x: 0, y: 0, isPressed: false };
+let zombies = [];
+let bullets = [];
+let wave = 1;
+let zombiesToSpawn = 5;
+let zombiesSpawned = 0;
+let lastSpawnTime = 0;
+let spawnDelay = 1000; // 1 second between spawns
+let gameOver = false;
+
+// Event Listeners for Controls
+window.addEventListener("keydown", (e) => {
+    keys[e.key.toLowerCase()] = true;
+    if (gameOver && e.key.toLowerCase() === 'r') {
+        resetGame();
+    }
+});
+window.addEventListener("keyup", (e) => {
+    keys[e.key.toLowerCase()] = false;
+});
+canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+});
+canvas.addEventListener("mousedown", () => mouse.isPressed = true);
+canvas.addEventListener("mouseup", () => mouse.isPressed = false);
+
+// Classes
+class Zombie {
+    constructor(waveNumber) {
+        // Spawn randomly along the screen edges
+        const edges = ['top', 'bottom', 'left', 'right'];
+        const chosenEdge = edges[Math.floor(Math.random() * edges.length)];
+        
+        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -20; }
+        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 20; }
+        else if (chosenEdge === 'left') { this.x = -20; this.y = Math.random() * canvas.height; }
+        else { this.x = canvas.width + 20; this.y = Math.random() * canvas.height; }
+
+        this.radius = 12;
+        this.health = 20 + (waveNumber * 5);
+        this.speed = 1.5 + Math.min(waveNumber * 0.2, 2.5);
+    }
+
+    update() {
+        // Track and move toward the player
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist !== 0) {
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+        }
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#32c832"; // Green Zombie
+        ctx.fill();
+        ctx.closePath();
+    }
+}
+
+class Bullet {
+    constructor(startX, startY, targetX, targetY) {
+        this.x = startX;
+        this.y = startY;
+        this.radius = 4;
+        this.speed = 10;
+        this.damage = 25;
+
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const dist = Math.hypot(dx, dy);
+
+        this.dx = dist !== 0 ? (dx / dist) * this.speed : this.speed;
+        this.dy = dist !== 0 ? (dy / dist) * this.speed : 0;
+    }
+
+    update() {
+        this.x += this.dx;
+        this.y += this.dy;
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffdf00"; // Yellow Bullet
+        ctx.fill();
+        ctx.closePath();
+    }
+}
+
+// Game Mechanics Engine
+function handlePlayerMovement() {
+    if ((keys['w'] || keys['arrowup']) && player.y > player.radius) player.y -= player.speed;
+    if ((keys['s'] || keys['arrowdown']) && player.y < canvas.height - player.radius) player.y += player.speed;
+    if ((keys['a'] || keys['arrowleft']) && player.x > player.radius) player.x -= player.speed;
+    if ((keys['d'] || keys['arrowright']) && player.x < canvas.width - player.radius) player.x += player.speed;
+}
+
+function handleShooting(currentTime) {
+    if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
+        bullets.push(new Bullet(player.x, player.y, mouse.x, mouse.y));
+        player.lastShotTime = currentTime;
+    }
+}
+
+function spawnLogic(currentTime) {
+    if (zombiesSpawned < zombiesToSpawn) {
+        if (currentTime - lastSpawnTime >= spawnDelay) {
+            zombies.push(new Zombie(wave));
+            zombiesSpawned++;
+            lastSpawnTime = currentTime;
+        }
+    }
+
+    // Advance to next wave when current wave is entirely eliminated
+    if (zombies.length === 0 && zombiesSpawned >= zombiesToSpawn) {
+        wave++;
+        zombiesToSpawn = wave * 5;
+        zombiesSpawned = 0;
+    }
+}
+
+function checkCollisions() {
+    // Bullet vs Zombie collision loop
+    for (let b = bullets.length - 1; b >= 0; b--) {
+        for (let z = zombies.length - 1; z >= 0; z--) {
+            const dist = Math.hypot(zombies[z].x - bullets[b].x, zombies[z].y - bullets[b].y);
+            
+            if (dist < zombies[z].radius + bullets[b].radius) {
+                zombies[z].health -= bullets[b].damage;
+                bullets.splice(b, 1);
+
+                if (zombies[z].health <= 0) {
+                    zombies.splice(z, 1);
+                    player.foodCans++; // Grant Food Can Currency
+                }
+                break;
+            }
+        }
+    }
+
+    // Zombie vs Player damage loop
+    zombies.forEach(zombie => {
+        const dist = Math.hypot(zombie.x - player.x, zombie.y - player.y);
+        if (dist < zombie.radius + player.radius) {
+            player.health -= 0.4; // Gradual damage continuous tracking
+            if (player.health <= 0) {
+                player.health = 0;
+                gameOver = true;
+            }
+        }
+    });
+}
+
+function resetGame() {
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+    player.health = 100;
+    player.foodCans = 0;
+    player.lastShotTime = 0;
+    zombies = [];
+    bullets = [];
+    wave = 1;
+    zombiesToSpawn = 5;
+    zombiesSpawned = 0;
+    gameOver = false;
+}
+
+// Render Engine UI
+function drawHUD() {
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText(`Wave: ${wave}`, 20, 35);
+    
+    ctx.fillStyle = "#ffdf00";
+    ctx.fillText(`🥫 Food Cans: ${player.foodCans}`, 20, 65);
+
+    const remaining = (zombiesToSpawn - zombiesSpawned) + zombies.length;
+    ctx.fillStyle = "white";
+    ctx.fillText(`Zombies Left: ${remaining}`, canvas.width - 180, 35);
+}
+
+function drawPlayer() {
+    // Draw Player (Blue)
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#3232c8";
+    ctx.fill();
+    ctx.closePath();
+
+    // Health bar outline
+    ctx.fillStyle = "#c83232";
+    ctx.fillRect(player.x - 20, player.y - 25, 40, 6);
+    // Dynamic health gauge
+    ctx.fillStyle = "#32c832";
+    ctx.fillRect(player.x - 20, player.y - 25, 40 * (player.health / 100), 6);
+}
+
+// Master Loop
+function gameLoop() {
+    const currentTime = performance.now();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!gameOver) {
+        handlePlayerMovement();
+        handleShooting(currentTime);
+        spawnLogic(currentTime);
+        checkCollisions();
+
+        // Update active entities and safely clean up offscreen bullets
+        bullets = bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
+        bullets.forEach(b => { b.update(); b.draw(); });
+        
+        zombies.forEach(z => { z.update(); z.draw(); });
+        
+        drawPlayer();
+        drawHUD();
+    } else {
+        // End Screen UI text overlay
+        ctx.fillStyle = "#c83232";
+        ctx.font = "48px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+        
+        ctx.fillStyle = "white";
+        ctx.font = "24px Arial";
+        ctx.fillText("Press 'R' to Restart Zombie Zhenanigans", canvas.width / 2, canvas.height / 2 + 30);
+        ctx.textAlign = "left"; // Reset positioning alignment
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Start Game Initialization
+gameLoop();
+</script>
+</body>
+</html>
 
