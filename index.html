@@ -89,7 +89,7 @@
 </head> 
 <body> 
     <div id="ui"> 
-        <div>ZOMBIE ZHENANIGANS</div> 
+        <div>ZOMBIE ZHENGANINZANS</div> 
         <div style="display: flex; align-items: center;"> 
             <span class="hp-label">HP:</span> 
             <div id="health-container"><div id="health-bar"></div></div> 
@@ -124,8 +124,7 @@
         let foodCans = 0; 
         let gameOver = false; 
 
-        // CHANGED: Changed to 'let' so you can modify this values down the line
-        let shootCooldown = 2000; // Set to 2000ms as requested
+        const shootCooldown = 500; 
         let lastShootTime = 0; 
 
         let currentWave = 0; 
@@ -195,39 +194,19 @@
             zombies.push({ 
                 x: x, 
                 y: y, 
-                size: 16, 
-                speed: 0.8 + Math.random() + speedBonus, 
-                angle: 0,
-                health: 20 
+                size: 16, // Bounds adjusted for block layout scaling matrix
+                speed: 0.8 + Math.random() + speedBonus,
+                angle: 0
             }); 
         } 
 
-        function resetGame() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            player.hp = player.maxHp;
-            bullets = [];
-            zombies = [];
-            foodCans = 0;
-            currentWave = 0;
-            waveState = "READY_TO_START";
-            gameOver = false;
-            gameoverEl.style.display = "none";
-            foodCansEl.innerText = foodCans;
-            healthBarEl.style.width = "100%";
-        }
-
-        // Main game Loop Engine
-        function loop(time) { 
-            if (gameOver) return requestAnimationFrame(loop); 
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function update(time) { 
+            if (gameOver) return; 
 
             if (zombies.length === 0 && waveState === "READY_TO_START") { 
                 startNextWave(); 
             } 
 
-            // Player Movement Controls
             if (keys['w'] || keys['arrowup']) player.y -= player.speed; 
             if (keys['s'] || keys['arrowdown']) player.y += player.speed; 
             if (keys['a'] || keys['arrowleft']) player.x -= player.speed; 
@@ -237,41 +216,15 @@
             player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y)); 
             player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x); 
 
-            // Bullet Engine Processing Loop
             for (let i = bullets.length - 1; i >= 0; i--) { 
                 let b = bullets[i]; 
                 b.x += b.vx; 
                 b.y += b.vy; 
-                
-                // Draw bullets
-                ctx.fillStyle = "#ffcc00";
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-                ctx.fill();
-
                 if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) { 
                     bullets.splice(i, 1); 
-                    continue;
                 } 
-
-                // Bullet hit zombie collision check
-                for (let j = zombies.length - 1; j >= 0; j--) {
-                    let z = zombies[j];
-                    if (Math.hypot(b.x - z.x, b.y - z.y) < b.size + z.size) {
-                        zombies.splice(j, 1);
-                        bullets.splice(i, 1);
-                        
-                        // 40% chance drop food can
-                        if (Math.random() < 0.4) {
-                            foodCans++;
-                            foodCansEl.innerText = foodCans;
-                        }
-                        break;
-                    }
-                }
             } 
 
-            // Zombie Engine Processing Loop
             for (let i = zombies.length - 1; i >= 0; i--) { 
                 let z = zombies[i]; 
                 let dx = player.x - z.x; 
@@ -280,55 +233,141 @@
 
                 z.x += (dx / dist) * z.speed; 
                 z.y += (dy / dist) * z.speed; 
-                z.angle = Math.atan2(dy, dx); 
+                z.angle = Math.atan2(dy, dx); // Track movement target direction
 
-                // Draw standard green circles for zombies
-                ctx.save();
-                ctx.translate(z.x, z.y);
-                ctx.rotate(z.angle);
-                ctx.fillStyle = "#4a6b52";
-                ctx.beginPath();
-                ctx.arc(0, 0, z.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-
-                // Player damage check
                 if (dist < player.size + z.size) { 
-                    if (time - lastHitTime >= hitCooldown) { 
-                        player.hp -= 10;
-                        healthBarEl.style.width = `${Math.max(0, player.hp)}%`;
-                        lastHitTime = time;
-                        
-                        if (player.hp <= 0) {
-                            gameOver = true;
-                            gameoverEl.style.display = "block";
-                        }
+                    if (time - lastHitTime > hitCooldown) { 
+                        player.hp -= 20; 
+                        lastHitTime = time; 
+                        let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100); 
+                        healthBarEl.style.width = hpPercent + "%"; 
+                         
+                        if (hpPercent < 30) healthBarEl.style.backgroundColor = "#ff3333"; 
+                        else if (hpPercent < 60) healthBarEl.style.backgroundColor = "#ff9900"; 
+
+                        if (player.hp <= 0) { 
+                            gameOver = true; 
+                            gameoverEl.style.display = "block"; 
+                        } 
+                    } 
+                } 
+
+                for (let j = bullets.length - 1; j >= 0; j--) { 
+                    let b = bullets[j]; 
+                    let bDist = Math.hypot(b.x - z.x, b.y - z.y); 
+                    if (bDist < z.size + b.size) { 
+                        zombies.splice(i, 1); 
+                        bullets.splice(j, 1); 
+                        foodCans += 1; 
+                        foodCansEl.innerText = foodCans; 
+                        break; 
                     } 
                 } 
             } 
 
-            // Trigger next wave if wave cleared out
-            if (zombies.length === 0 && waveState === "FIGHTING") {
-                waveState = "READY_TO_START";
-            }
-
-            // Draw player
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-            ctx.fillStyle = "#3498db";
-            ctx.beginPath();
-            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "#555";
-            ctx.fillRect(5, -3, 15, 6);
-            ctx.restore();
-
-            requestAnimationFrame(loop);
+            if (zombies.length === 0 && waveState === "FIGHTING") { 
+                waveState = "READY_TO_START"; 
+            } 
         } 
 
-        // Start animation processing frame
-        requestAnimationFrame(loop);
+        function render() { 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+            ctx.save(); 
+            ctx.translate(player.x, player.y); 
+            ctx.rotate(player.angle); 
+            ctx.fillStyle = "#3388ff"; 
+            ctx.beginPath(); 
+            ctx.arc(0, 0, player.size, 0, Math.PI * 2); 
+            ctx.fill(); 
+            ctx.fillStyle = "#555"; 
+            ctx.fillRect(0, -4, 25, 8); 
+            ctx.restore(); 
+
+            ctx.fillStyle = "#ffcc00"; 
+            bullets.forEach(b => { 
+                ctx.beginPath(); 
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); 
+                ctx.fill(); 
+            }); 
+
+            // Render Processional Pixel Art Zombie Blocks
+            zombies.forEach(z => { 
+                ctx.save(); 
+                ctx.translate(z.x, z.y); 
+                ctx.rotate(z.angle); 
+                
+                ctx.imageSmoothingEnabled = false; 
+                
+                const s = z.size;
+                const p = (s * 2) / 8; // Split block into 8x8 clean grid sectors
+                
+                // 1. Base Rotten Flesh Green Box Head
+                ctx.fillStyle = "#356e31";
+                ctx.fillRect(-s, -s, s * 2, s * 2);
+                
+                // 2. Dark Shadow Inner Contrast Borders
+                ctx.fillStyle = "#1e421b";
+                ctx.fillRect(-s, -s, s * 2, p);
+                ctx.fillRect(-s, s - p, s * 2, p);
+                ctx.fillRect(-s, -s, p, s * 2);
+                ctx.fillRect(s - p, -s, p, s * 2);
+                
+                // 3. Dual Red Glowing Eyes (Oriented right, toward target)
+                ctx.fillStyle = "#ff2222";
+                ctx.fillRect(s - p * 3, -s + p * 2, p, p); // Eye 1
+                ctx.fillRect(s - p * 3, s - p * 3, p, p);  // Eye 2
+                
+                // 4. Pixelated Open Zombie Mouth
+                ctx.fillStyle = "#0f170e";
+                ctx.fillRect(s - p * 2, -s + p * 3, p, p * 2);
+
+                // 5. Dark Red Stitched Scars across Head
+                ctx.fillStyle = "#7a1a1a";
+                // Main linear scar cut
+                ctx.fillRect(-s + p * 2, -s + p * 2, p * 3, p);
+                // Cross stitches cuts lines
+                ctx.fillRect(-s + p * 2, -s + p * 1, p, p * 3);
+                ctx.fillRect(-s + p * 4, -s + p * 1, p, p * 3);
+                
+                ctx.restore(); 
+            }); 
+
+            const timeSinceLastShot = performance.now() - lastShootTime; 
+            if (timeSinceLastShot < shootCooldown) { 
+                const progress = timeSinceLastShot / shootCooldown; 
+                ctx.beginPath(); 
+                ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress)); 
+                ctx.strokeStyle = "rgba(255, 204, 0, 0.7)"; 
+                ctx.lineWidth = 3; 
+                ctx.stroke(); 
+            } 
+        } 
+
+        function loop(time) { 
+            update(time); 
+            render(); 
+            requestAnimationFrame(loop); 
+        } 
+
+        function resetGame() { 
+            player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 }; 
+            bullets = []; 
+            zombies = []; 
+            foodCans = 0; 
+            currentWave = 0; 
+            lastShootTime = 0; 
+            gameOver = false; 
+            waveState = "READY_TO_START"; 
+            foodCansEl.innerText = foodCans; 
+            waveEl.innerText = 0; 
+            healthBarEl.style.width = "100%"; 
+            healthBarEl.style.backgroundColor = "#00ff66"; 
+            gameoverEl.style.display = "none"; 
+            waveBanner.style.opacity = "0"; 
+        } 
+
+        requestAnimationFrame(loop); 
     </script> 
 </body> 
 </html>
