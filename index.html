@@ -61,7 +61,7 @@ let keys = {};
 let mouse = { x: 0, y: 0, isPressed: false };
 let zombies = [];
 let bullets = [];
-let particles = []; // Visual particle effects system
+let particles = []; 
 let wave = 1;
 let zombiesToSpawn = 5;
 let zombiesSpawned = 0;
@@ -336,7 +336,7 @@ function drawHUD() {
 
     // Top Center Premium Sleek Health Bar
     const barWidth = 240;
-    const barHeight = 10;
+    const barHeight = 12;
     const barX = (canvas.width / 2) - (barWidth / 2);
     const barY = 32;
 
@@ -345,23 +345,25 @@ function drawHUD() {
     ctx.fillStyle = "#cbd5e1";
     ctx.fillText(`VITALS: ${Math.ceil(player.health)}%`, canvas.width / 2, barY - 8);
 
-    // Dark sleek housing track container
-    ctx.fillStyle = "#1e1e24";
+    // 1. Draw Background Track Container (Explicit Path Isolation)
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barWidth, barHeight, 5);
+    ctx.fillStyle = "#1e1e24";
+    ctx.roundRect(barX, barY, barWidth, barHeight, 6);
     ctx.fill();
 
-    // Vibrant Glow Drop-shadow Layer
+    // 2. Draw Active Health Gauge (Explicit Path Isolation)
     if (player.health > 0) {
         ctx.save();
-        ctx.shadowBlur = 12;
-        // Changes colors dynamically based on safety thresholds
-        const healthColor = player.health > 40 ? "#ef4444" : "#b91c1c"; 
+        ctx.beginPath(); // Crucial path separator to fix rendering bug
+        
+        // Dynamically shift coloring from Green to Warning Red
+        const healthColor = player.health > 35 ? "#10b981" : "#ef4444"; 
+        
+        ctx.shadowBlur = 14;
         ctx.shadowColor = healthColor;
         ctx.fillStyle = healthColor;
         
-        ctx.beginPath();
-        ctx.roundRect(barX, barY, barWidth * (player.health / 100), barHeight, 5);
+        ctx.roundRect(barX, barY, barWidth * (player.health / 100), barHeight, 6);
         ctx.fill();
         ctx.restore();
     }
@@ -371,7 +373,6 @@ function drawHUD() {
 
 function drawPlayer() {
     ctx.save();
-    // Compute exact head orientation angle tracking crosshairs mouse target
     const pAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     ctx.translate(player.x, player.y);
     ctx.rotate(pAngle);
@@ -433,7 +434,6 @@ function gameLoop() {
         bullets = bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
         particles = particles.filter(p => p.alpha > 0);
 
-        // Step and render blood/spark particles
         particles.forEach(p => {
             p.update();
             p.draw();
