@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Zhenanigans</title>
+    <title>Zombie Apocalypse - Pixel Survival</title>
     <style>
         body {
             margin: 0;
-            background-color: #0a0a0c;
-            color: #e2e8f0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #050505;
+            color: #bdc3c7;
+            font-family: 'Courier New', Courier, monospace; /* Retro arcade font feel */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,19 +18,20 @@
             overflow: hidden;
         }
         canvas {
-            border: 4px solid #1e1e24;
-            background-color: #030303;
-            box-shadow: 0 0 30px rgba(0, 255, 100, 0.05), inset 0 0 100px rgba(0,0,0,0.9);
+            border: 6px solid #2c3e50;
+            background-color: #11141a; /* Gritty, dark post-apocalyptic ground color */
+            image-rendering: pixelated; /* Forces modern browsers to crisp up rect edges */
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
             cursor: crosshair;
-            border-radius: 4px;
         }
         #instructions {
             margin-top: 15px;
-            color: #64748b;
-            font-size: 14px;
-            letter-spacing: 0.05em;
+            color: #7f8c8d;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
             text-align: center;
-            font-weight: 500;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -38,23 +39,25 @@
 
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="instructions">
-        <strong>WASD / Arrows</strong> to Move | <strong>Left Click & Hold</strong> to Shoot | <strong>R</strong> to Restart
+        [WASD/Arrows] Move | [Left Click] Fire Pixel Blaster | [R] Retry Apocalypse
     </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+// Disable smoothing to force crisp pixel edges
+ctx.imageSmoothingEnabled = false;
 
 // Game State Variables
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 15,
-    speed: 4,
+    size: 24, // Box dimensions for pixel style
+    speed: 3.5,
     health: 100,
     foodCans: 0,
     lastShotTime: 0,
-    shootCooldown: 500
+    shootCooldown: 200
 };
 
 let keys = {};
@@ -66,10 +69,10 @@ let wave = 1;
 let zombiesToSpawn = 5;
 let zombiesSpawned = 0;
 let lastSpawnTime = 0;
-let spawnDelay = 1000;
+let spawnDelay = 1200;
 let gameOver = false;
 
-// Event Listeners for Controls
+// Event Listeners
 window.addEventListener("keydown", (e) => {
     keys[e.key.toLowerCase()] = true;
     if (gameOver && e.key.toLowerCase() === 'r') {
@@ -88,17 +91,17 @@ canvas.addEventListener("mousedown", () => mouse.isPressed = true);
 canvas.addEventListener("mouseup", () => mouse.isPressed = false);
 
 // Classes
-class Particle {
+class PixelParticle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
-        this.radius = Math.random() * 3 + 1;
+        this.size = Math.floor(Math.random() * 3) + 3; // Blocky fragments
         this.speed = Math.random() * 3 + 1;
         this.angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(this.angle) * this.speed;
         this.vy = Math.sin(this.angle) * this.speed;
         this.alpha = 1;
-        this.decay = Math.random() * 0.02 + 0.01;
+        this.decay = Math.random() * 0.03 + 0.02;
         this.color = color;
     }
 
@@ -111,28 +114,31 @@ class Particle {
     draw() {
         ctx.save();
         ctx.globalAlpha = this.alpha;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.fill();
+        // Snap to grid integer for flawless retro pixels
+        ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
         ctx.restore();
     }
 }
 
-class Zombie {
+class PixelZombie {
     constructor(waveNumber) {
         const edges = ['top', 'bottom', 'left', 'right'];
         const chosenEdge = edges[Math.floor(Math.random() * edges.length)];
         
-        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -20; }
-        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 20; }
-        else if (chosenEdge === 'left') { this.x = -20; this.y = Math.random() * canvas.height; }
-        else { this.x = canvas.width + 20; this.y = Math.random() * canvas.height; }
+        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -30; }
+        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 30; }
+        else if (chosenEdge === 'left') { this.x = -30; this.y = Math.random() * canvas.height; }
+        else { this.x = canvas.width + 30; this.y = Math.random() * canvas.height; }
 
-        this.radius = 14;
+        this.size = 24; // Multiples of 4 make perfect pixel grids
         this.health = 20 + (waveNumber * 5);
-        this.speed = 1.5 + Math.min(waveNumber * 0.2, 2.5);
+        this.speed = 1.2 + Math.min(waveNumber * 0.15, 2.0);
         this.angle = 0;
+        
+        // Randomize clothing shades for zombie variation
+        this.shirtColor = Math.random() > 0.5 ? "#2e4053" : "#566573";
+        this.skinColor = Math.random() > 0.4 ? "#4a7c59" : "#2d5a27"; // Rotting green variants
     }
 
     update() {
@@ -149,47 +155,47 @@ class Zombie {
 
     draw() {
         ctx.save();
-        ctx.translate(this.x, this.y);
+        ctx.translate(Math.floor(this.x), Math.floor(this.y));
         ctx.rotate(this.angle);
 
-        // Neon shadow glow for cyber zombie look
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#10b981";
+        // Pixel Art Grid Layout (-12 to 12 bounds)
+        
+        // 1. Black Pixel Outline
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(-14, -14, 28, 28);
 
-        // Main Body (Dark Cyber Rot Green)
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#064e3b";
-        ctx.strokeStyle = "#10b981";
-        ctx.lineWidth = 2;
-        ctx.fill();
-        ctx.stroke();
+        // 2. Main Head & Body base
+        ctx.fillStyle = this.skinColor; 
+        ctx.fillRect(-12, -12, 24, 24);
 
-        // Remove glow effect for smaller details
-        ctx.shadowBlur = 0;
+        // 3. Tattered Post-Apocalypse Shirt overlay
+        ctx.fillStyle = this.shirtColor;
+        ctx.fillRect(-12, -12, 8, 24); 
 
-        // Visual Zombie Details (Grabbing Hands)
-        ctx.fillStyle = "#34d399";
-        ctx.fillRect(this.radius - 2, -8, 6, 4);
-        ctx.fillRect(this.radius - 2, 4, 6, 4);
+        // 4. Pixelated Outstretched Grabbing Arms
+        ctx.fillStyle = this.skinColor;
+        ctx.fillRect(8, -10, 8, 4); // Arm 1
+        ctx.fillRect(8, 6, 8, 4);  // Arm 2
+        // Bloodied hands tip
+        ctx.fillStyle = "#922b21";
+        ctx.fillRect(14, -10, 4, 4);
+        ctx.fillRect(14, 6, 4, 4);
 
-        // Piercing Neon Yellow Eyes
-        ctx.fillStyle = "#fbbf24";
-        ctx.beginPath();
-        ctx.arc(5, -4, 2.5, 0, Math.PI * 2);
-        ctx.arc(5, 4, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        // 5. Dead Glowing Red Apocalypse Eyes
+        ctx.fillStyle = "#ff0000";
+        ctx.fillRect(2, -6, 4, 4);
+        ctx.fillRect(2, 2, 4, 4);
 
         ctx.restore();
     }
 }
 
-class Bullet {
+class PixelBullet {
     constructor(startX, startY, targetX, targetY) {
         this.x = startX;
         this.y = startY;
-        this.radius = 3;
-        this.speed = 12;
+        this.size = 6; // Block projectile
+        this.speed = 14;
         this.damage = 25;
 
         const dx = targetX - startX;
@@ -207,27 +213,27 @@ class Bullet {
 
     draw() {
         ctx.save();
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "#38bdf8";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#0ea5e9"; // Cyan laser projectile
-        ctx.fill();
+        // Yellow core bullet with orange tailing shape
+        ctx.fillStyle = "#d35400";
+        ctx.fillRect(Math.floor(this.x) - 2, Math.floor(this.y) - 2, this.size + 4, this.size + 4);
+        ctx.fillStyle = "#f1c40f";
+        ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
         ctx.restore();
     }
 }
 
 // Game Mechanics Engine
 function handlePlayerMovement() {
-    if ((keys['w'] || keys['arrowup']) && player.y > player.radius) player.y -= player.speed;
-    if ((keys['s'] || keys['arrowdown']) && player.y < canvas.height - player.radius) player.y += player.speed;
-    if ((keys['a'] || keys['arrowleft']) && player.x > player.radius) player.x -= player.speed;
-    if ((keys['d'] || keys['arrowright']) && player.x < canvas.width - player.radius) player.x += player.speed;
+    const halfSize = player.size / 2;
+    if ((keys['w'] || keys['arrowup']) && player.y > halfSize) player.y -= player.speed;
+    if ((keys['s'] || keys['arrowdown']) && player.y < canvas.height - halfSize) player.y += player.speed;
+    if ((keys['a'] || keys['arrowleft']) && player.x > halfSize) player.x -= player.speed;
+    if ((keys['d'] || keys['arrowright']) && player.x < canvas.width - halfSize) player.x += player.speed;
 }
 
 function handleShooting(currentTime) {
     if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
-        bullets.push(new Bullet(player.x, player.y, mouse.x, mouse.y));
+        bullets.push(new PixelBullet(player.x, player.y, mouse.x, mouse.y));
         player.lastShotTime = currentTime;
     }
 }
@@ -235,7 +241,7 @@ function handleShooting(currentTime) {
 function spawnLogic(currentTime) {
     if (zombiesSpawned < zombiesToSpawn) {
         if (currentTime - lastSpawnTime >= spawnDelay) {
-            zombies.push(new Zombie(wave));
+            zombies.push(new PixelZombie(wave));
             zombiesSpawned++;
             lastSpawnTime = currentTime;
         }
@@ -243,55 +249,143 @@ function spawnLogic(currentTime) {
 
     if (zombies.length === 0 && zombiesSpawned >= zombiesToSpawn) {
         wave++;
-        zombiesToSpawn = wave * 5;
+        zombiesToSpawn = wave * 6;
         zombiesSpawned = 0;
+        spawnDelay = Math.max(400, spawnDelay - 100); // Waves accelerate faster
     }
 }
 
 function checkCollisions() {
-    // Bullet vs Zombie collision loop
+    // Bullet vs Zombie 
     for (let b = bullets.length - 1; b >= 0; b--) {
         for (let z = zombies.length - 1; z >= 0; z--) {
+            if (!bullets[b] || !zombies[z]) continue;
+            
+            // Box/Distance bounding cross
             const dist = Math.hypot(zombies[z].x - bullets[b].x, zombies[z].y - bullets[b].y);
             
-            if (dist < zombies[z].radius + bullets[b].radius) {
+            if (dist < (zombies[z].size / 2) + (bullets[b].size / 2)) {
                 zombies[z].health -= bullets[b].damage;
                 
-                // Light hit splatters
-                for (let i = 0; i < 4; i++) {
-                    particles.push(new Particle(zombies[z].x, zombies[z].y, "#047857"));
+                // Dark zombie blood splatter block particles
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new PixelParticle(bullets[b].x, bullets[b].y, "#196f3d"));
                 }
 
                 bullets.splice(b, 1);
 
                 if (zombies[z].health <= 0) {
-                    // Massive elimination explosion burst
-                    for (let i = 0; i < 12; i++) {
-                        particles.push(new Particle(zombies[z].x, zombies[z].y, "#10b981"));
+                    // Massive gore splash explosion on death
+                    for (let i = 0; i < 14; i++) {
+                        particles.push(new PixelParticle(zombies[z].x, zombies[z].y, Math.random() > 0.4 ? "#922b21" : "#1e8449"));
                     }
                     zombies.splice(z, 1);
-                    player.foodCans++;
+                    player.foodCans += 25; // Score point increment
                 }
-                break;
+                break; 
             }
         }
     }
 
-    // Zombie vs Player damage loop
-    zombies.forEach(zombie => {
-        const dist = Math.hypot(zombie.x - player.x, zombie.y - player.y);
-        if (dist < zombie.radius + player.radius) {
-            player.health -= 0.4;
-            // Spawns friction hit sparks from the player's energy shields
-            if (Math.random() < 0.3) {
-                particles.push(new Particle(player.x, player.y, "#f43f5e"));
+    // Zombie vs Player
+    for (let z = zombies.length - 1; z >= 0; z--) {
+        const dist = Math.hypot(player.x - zombies[z].x, player.y - zombies[z].y);
+        if (dist < (player.size / 2) + (zombies[z].size / 2)) {
+            player.health -= 0.75; 
+            
+            // Player damage blood pixels
+            if (Math.random() > 0.5) {
+                particles.push(new PixelParticle(player.x, player.y, "#ff0000"));
             }
+            
             if (player.health <= 0) {
                 player.health = 0;
                 gameOver = true;
             }
         }
-    });
+    }
+}
+
+function drawPlayer() {
+    ctx.save();
+    const playerAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    ctx.translate(Math.floor(player.x), Math.floor(player.y));
+    ctx.rotate(playerAngle);
+
+    // Pixel Survivor Drawing Layout
+    // 1. Black border core Outline
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(-14, -14, 28, 28);
+
+    // 2. Survivor Body Jacket (Apocalyptic Navy Blue)
+    ctx.fillStyle = "#2471a3";
+    ctx.fillRect(-12, -12, 24, 24);
+
+    // 3. Tactical vest armor panel
+    ctx.fillStyle = "#2c3e50";
+    ctx.fillRect(-6, -12, 12, 24);
+
+    // 4. Survivor Head/Skin (Pixel square)
+    ctx.fillStyle = "#f5cba7";
+    ctx.fillRect(-8, -8, 14, 16);
+
+    // 5. Weapon sprite block (Dual shotgun barrels)
+    ctx.fillStyle = "#7f8c8d";
+    ctx.fillRect(10, -5, 12, 4);
+    ctx.fillRect(10, 1, 12, 4);
+    ctx.fillStyle = "#111111"; // Gun trim muzzle tip
+    ctx.fillRect(20, -5, 2, 10);
+
+    ctx.restore();
+}
+
+function drawUI() {
+    // Retro UI Styling
+    // Health HUD
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(20, 20, 200, 20);
+    ctx.fillStyle = player.health > 30 ? "#c0392b" : "#7b241c"; // Apocalypse red health
+    ctx.fillRect(20, 20, player.health * 2, 20);
+    
+    // Grid overlay for health bar to look like segments
+    ctx.strokeStyle = "#11141a";
+    ctx.lineWidth = 2;
+    for(let i = 1; i < 10; i++) {
+        ctx.beginPath();
+        ctx.moveTo(20 + (i * 20), 20);
+        ctx.lineTo(20 + (i * 20), 40);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px 'Courier New'";
+    ctx.fillText(`SURVIVOR HP: ${Math.ceil(player.health)}%`, 30, 34);
+
+    // Day/Wave Counter
+    ctx.font = "bold 22px 'Courier New'";
+    ctx.fillStyle = "#e67e22";
+    ctx.fillText(`SURVIVAL: DAY ${wave}`, canvas.width / 2 - 95, 38);
+
+    // Supplies/Score Collected 
+    ctx.font = "bold 14px 'Courier New'";
+    ctx.fillStyle = "#f1c40f";
+    ctx.fillText(`SUPPLIES: ${player.foodCans} PTS`, canvas.width - 190, 34);
+
+    if (gameOver) {
+        ctx.fillStyle = "rgba(16, 16, 20, 0.95)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = "bold 44px 'Courier New'";
+        ctx.fillStyle = "#922b21";
+        ctx.fillText("YOU WERE OVERRUN", canvas.width / 2 - 200, canvas.height / 2 - 30);
+
+        ctx.font = "20px 'Courier New'";
+        ctx.fillStyle = "#bdc3c7";
+        ctx.fillText(`Survived Until Day ${wave}`, canvas.width / 2 - 120, canvas.height / 2 + 15);
+        
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillText("Press [R] to Respawn Alternative Timeline", canvas.width / 2 - 230, canvas.height / 2 + 60);
+    }
 }
 
 function resetGame() {
@@ -299,167 +393,48 @@ function resetGame() {
     player.y = canvas.height / 2;
     player.health = 100;
     player.foodCans = 0;
-    player.lastShotTime = 0;
     zombies = [];
     bullets = [];
     particles = [];
     wave = 1;
     zombiesToSpawn = 5;
     zombiesSpawned = 0;
+    spawnDelay = 1200;
     gameOver = false;
 }
 
-// Render Engine UI
-function drawHUD() {
-    ctx.font = "bold 16px 'Segoe UI', Arial, sans-serif";
-    
-    // Left side info strings
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("SURVIVAL WAVE", 20, 30);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText(`${wave}`, 20, 58);
-    
-    ctx.font = "bold 15px 'Segoe UI', Arial, sans-serif";
-    ctx.fillStyle = "#fbbf24";
-    ctx.fillText(`🥫 Cans Collected: ${player.foodCans}`, 20, 90);
-
-    // Right side target tracker
-    const remaining = (zombiesToSpawn - zombiesSpawned) + zombies.length;
-    ctx.textAlign = "right";
-    ctx.font = "bold 16px 'Segoe UI', Arial, sans-serif";
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("HOSTILES REMAINING", canvas.width - 20, 30);
-    ctx.fillStyle = "#f43f5e";
-    ctx.font = "bold 24px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText(`${remaining}`, canvas.width - 20, 58);
-
-    // Top Center Premium Sleek Health Bar
-    const barWidth = 240;
-    const barHeight = 12;
-    const barX = (canvas.width / 2) - (barWidth / 2);
-    const barY = 32;
-
-    ctx.textAlign = "center";
-    ctx.font = "bold 12px 'Segoe UI', Arial, sans-serif";
-    ctx.fillStyle = "#cbd5e1";
-    ctx.fillText(`VITALS: ${Math.ceil(player.health)}%`, canvas.width / 2, barY - 8);
-
-    // 1. Draw Background Track Container (Explicit Path Isolation)
-    ctx.beginPath();
-    ctx.fillStyle = "#1e1e24";
-    ctx.roundRect(barX, barY, barWidth, barHeight, 6);
-    ctx.fill();
-
-    // 2. Draw Active Health Gauge (Explicit Path Isolation)
-    if (player.health > 0) {
-        ctx.save();
-        ctx.beginPath(); // Crucial path separator to fix rendering bug
-        
-        // Dynamically shift coloring from Green to Warning Red
-        const healthColor = player.health > 35 ? "#10b981" : "#ef4444"; 
-        
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = healthColor;
-        ctx.fillStyle = healthColor;
-        
-        ctx.roundRect(barX, barY, barWidth * (player.health / 100), barHeight, 6);
-        ctx.fill();
-        ctx.restore();
-    }
-
-    ctx.textAlign = "left"; 
-}
-
-function drawPlayer() {
-    ctx.save();
-    const pAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    ctx.translate(player.x, player.y);
-    ctx.rotate(pAngle);
-
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#f43f5e";
-
-    // Shield outline ring
-    ctx.beginPath();
-    ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#881337";
-    ctx.strokeStyle = "#f43f5e";
-    ctx.lineWidth = 2.5;
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.shadowBlur = 0;
-
-    // Tactical Gun Arm Indicator
-    ctx.fillStyle = "#fda4af";
-    ctx.fillRect(player.radius - 4, -4, 10, 8);
-
-    ctx.restore();
-}
-
-function drawGameOver() {
-    ctx.fillStyle = "rgba(10, 10, 12, 0.9)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "#f43f5e";
-    ctx.font = "bold 56px 'Segoe UI', Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#f43f5e";
-    ctx.fillText("SYSTEM FAILURE", canvas.width / 2, canvas.height / 2 - 30);
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "18px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText(`You reached Wave ${wave} and extracted ${player.foodCans} supplies.`, canvas.width / 2, canvas.height / 2 + 25);
-    
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 16px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText("PRESS 'R' TO REBOOT TERMINAL", canvas.width / 2, canvas.height / 2 + 75);
-    ctx.textAlign = "left";
-}
-
-// Master Loop
-function gameLoop() {
-    const currentTime = performance.now();
+// Global Animation Engine Loop
+function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!gameOver) {
         handlePlayerMovement();
-        handleShooting(currentTime);
-        spawnLogic(currentTime);
+        handleShooting(timestamp);
+        spawnLogic(timestamp);
         checkCollisions();
 
+        // Update arrays
+        zombies.forEach(z => z.update());
+        bullets.forEach(b => b.update());
+        particles.forEach(p => p.update());
+
+        // Housekeeping arrays
         bullets = bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
         particles = particles.filter(p => p.alpha > 0);
-
-        particles.forEach(p => {
-            p.update();
-            p.draw();
-        });
-
-        bullets.forEach(bullet => {
-            bullet.update();
-            bullet.draw();
-        });
-
-        zombies.forEach(zombie => {
-            zombie.update();
-            zombie.draw();
-        });
-
-        drawPlayer();
-        drawHUD();
-    } else {
-        drawGameOver();
     }
+
+    // Render Pipeline (Pixel order stacking)
+    particles.forEach(p => p.draw());
+    bullets.forEach(b => b.draw());
+    zombies.forEach(z => z.draw());
+    drawPlayer();
+    drawUI();
 
     requestAnimationFrame(gameLoop);
 }
 
-// Initialize Game
-gameLoop();
+// Start Game Entrypoint
+requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
