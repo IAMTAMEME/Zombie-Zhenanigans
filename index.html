@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Apocalypse - Retro Arcade Edition</title>
+    <title>Zombie Survival - Standard Edition</title>
     <style>
         body {
             margin: 0;
-            background-color: #000000;
-            color: #33ff33; /* Neon retro green */
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,63 +17,54 @@
             height: 100vh;
             overflow: hidden;
         }
-        #ui-wrapper {
+        #game-container {
             position: relative;
-            border: 4px solid #33ff33; /* Retro neon terminal frame */
-            box-shadow: 0 0 25px #33ff33;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
         canvas {
-            background-color: #05080c; 
-            image-rendering: pixelated;
-            cursor: crosshair;
+            background-color: #2e3d30; /* Normal dark green grass/ground color */
+            border: 4px solid #333333;
             display: block;
+            cursor: crosshair;
         }
         #hud {
             position: absolute;
             top: 15px;
             left: 20px;
-            color: #33ff33;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
-            text-shadow: 2px 2px #000;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
             pointer-events: none;
-            letter-spacing: 2px;
-            line-height: 1.4;
         }
-        /* Massive, Ultra-Visible Retro Canvas Health Bar */
         #health-container {
             position: absolute;
             top: 15px;
             right: 20px;
-            width: 250px;
-            height: 24px;
-            background-color: #111;
-            border: 3px solid #33ff33;
-            box-shadow: 0 0 10px #33ff33;
+            width: 200px;
+            height: 20px;
+            background-color: #333333;
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            overflow: hidden;
             pointer-events: none;
-            padding: 2px;
-            box-sizing: border-box;
         }
         #health-bar {
             width: 100%;
             height: 100%;
-            background-color: #33ff33; /* Green retro bar */
-            box-shadow: 0 0 8px #33ff33;
+            background-color: #27ae60; /* Normal healthy green bar */
+            transition: width 0.1s;
         }
         #instructions {
             margin-top: 15px;
-            color: #33ff33;
+            color: #aaaaaa;
             font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
             text-align: center;
-            text-shadow: 0 0 5px #33ff33;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-wrapper">
+    <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="hud"></div>
         <div id="health-container">
@@ -81,7 +72,7 @@
         </div>
     </div>
     <div id="instructions">
-        [WASD] Move | [Left Click] Laser Fire | [R] Reboot System
+        [WASD / Arrow Keys] Move | [Left Click] Shoot | [R] Restart Game
     </div>
 
 <script>
@@ -89,34 +80,32 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const hud = document.getElementById("hud");
 const healthBar = document.getElementById("health-bar");
-ctx.imageSmoothingEnabled = false;
 
-// Game State Variables
+// Game Variables
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    size: 24,
-    speed: 3.8,
+    size: 20,
+    speed: 4,
     health: 100,
-    maxHealth: 100,
     kills: 0,
     lastShotTime: 0,
-    shootCooldown: 180
+    shootCooldown: 150
 };
 
 let keys = {};
 let mouse = { x: 0, y: 0, isPressed: false };
 let zombies = [];
 let bullets = [];
-let particles = []; 
+let particles = [];
 let wave = 1;
-let zombiesToSpawn = 6;
+let zombiesToSpawn = 5;
 let zombiesSpawned = 0;
 let lastSpawnTime = 0;
 let spawnDelay = 1000;
 let gameOver = false;
 
-// Event Listeners
+// Controls listeners
 window.addEventListener("keydown", (e) => {
     keys[e.key.toLowerCase()] = true;
     if (gameOver && e.key.toLowerCase() === 'r') resetGame();
@@ -131,17 +120,15 @@ canvas.addEventListener("mousedown", () => mouse.isPressed = true);
 canvas.addEventListener("mouseup", () => mouse.isPressed = false);
 
 // Classes
-class RetroParticle {
+class SplatParticle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
-        this.size = Math.floor(Math.random() * 3) + 3;
-        this.speed = Math.random() * 4 + 2;
-        this.angle = Math.random() * Math.PI * 2;
-        this.vx = Math.cos(this.angle) * this.speed;
-        this.vy = Math.sin(this.angle) * this.speed;
+        this.size = Math.random() * 3 + 2;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
         this.alpha = 1;
-        this.decay = Math.random() * 0.04 + 0.03;
+        this.decay = Math.random() * 0.03 + 0.02;
         this.color = color;
     }
     update() {
@@ -153,75 +140,63 @@ class RetroParticle {
         ctx.save();
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
-        ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 }
 
-class RetroCubeZombie {
-    constructor(waveNumber) {
+class StandardZombie {
+    constructor() {
         const edges = ['top', 'bottom', 'left', 'right'];
         const chosenEdge = edges[Math.floor(Math.random() * edges.length)];
         
-        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -30; }
-        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 30; }
-        else if (chosenEdge === 'left') { this.x = -30; this.y = Math.random() * canvas.height; }
-        else { this.x = canvas.width + 30; this.y = Math.random() * canvas.height; }
+        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -20; }
+        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 20; }
+        else if (chosenEdge === 'left') { this.x = -20; this.y = Math.random() * canvas.height; }
+        else { this.x = canvas.width + 20; this.y = Math.random() * canvas.height; }
 
-        this.size = 24;
-        this.health = 20 + (waveNumber * 6);
-        this.speed = 1.3 + Math.min(waveNumber * 0.15, 2.3);
-        this.angle = 0;
+        this.radius = 12;
+        this.health = 30 + (wave * 5);
+        this.speed = 1.5 + Math.min(wave * 0.1, 1.5);
     }
     update() {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
         if (dist !== 0) {
-            this.angle = Math.atan2(dy, dx);
             this.x += (dx / dist) * this.speed;
             this.y += (dy / dist) * this.speed;
         }
     }
     draw() {
-        ctx.save();
-        ctx.translate(Math.floor(this.x), Math.floor(this.y));
-        ctx.rotate(this.angle);
+        // Normal circular zombie drawing
+        ctx.fillStyle = "#5c8a60"; // Classic zombie rotten green
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#3e5c41";
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-        // 1. Black outer shadow line
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(-14, -14, 28, 28);
-
-        // 2. Thick Green Outline
-        ctx.fillStyle = "#33ff33"; 
-        ctx.fillRect(-12, -12, 24, 24);
-
-        // 3. Dark interior fill to leave the green border visible (Cube Style)
-        ctx.fillStyle = "#0c140c";
-        ctx.fillRect(-9, -9, 18, 18); 
-
-        // 4. Black Scars running through the cube
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(-5, -5, 10, 2);  
-        ctx.fillRect(2, -2, 2, 8);    
-        ctx.fillRect(-7, 3, 6, 2);    
-
-        // 5. Glowing Neon Red Eyes
-        ctx.fillStyle = "#ff3333";
-        ctx.fillRect(2, -6, 4, 4);
-        ctx.fillRect(2, 2, 4, 4);
-
-        ctx.restore();
+        // Simple eyes looking toward target direction
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        ctx.fillStyle = "#ff4d4d"; // Normal dark red eyes
+        ctx.beginPath();
+        ctx.arc(this.x + Math.cos(angle + 0.4) * 6, this.y + Math.sin(angle + 0.4) * 6, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + Math.cos(angle - 0.4) * 6, this.y + Math.sin(angle - 0.4) * 6, 2, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
-class RetroLaser {
+class StandardBullet {
     constructor(startX, startY, targetX, targetY) {
         this.x = startX;
         this.y = startY;
-        this.size = 6;
-        this.speed = 16;
-        this.damage = 25;
+        this.radius = 3;
+        this.speed = 12;
+        this.damage = 20;
         const dx = targetX - startX;
         const dy = targetY - startY;
         const dist = Math.hypot(dx, dy);
@@ -233,53 +208,47 @@ class RetroLaser {
         this.y += this.dy;
     }
     draw() {
-        ctx.save();
-        // High-vis bright yellow-cyan beam block
-        ctx.fillStyle = "#00ffff";
-        ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
-        ctx.restore();
+        ctx.fillStyle = "#f39c12"; // Standard bright yellow bullet
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
-// Engine Functions
+// Logic Loops
 function drawPlayer() {
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    
     ctx.save();
-    ctx.translate(Math.floor(player.x), Math.floor(player.y));
+    ctx.translate(player.x, player.y);
     ctx.rotate(angle);
 
-    // Outline
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(-14, -14, 28, 28);
+    // Player body circle
+    ctx.fillStyle = "#3498db"; // Clean blue hero
+    ctx.beginPath();
+    ctx.arc(0, 0, player.size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2980b9";
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    // Neon Cyan Retro Player Ship/Cube
-    ctx.fillStyle = "#00ffff"; 
-    ctx.fillRect(-12, -12, 24, 24);
-    
-    // Core design detailing
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(-8, -8, 16, 16);
-    ctx.fillStyle = "#00ffff";
-    ctx.fillRect(-4, -4, 8, 8);
-
-    // Blaster Barrel
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(8, -3, 12, 6);
+    // Weapon barrel line pointing toward cursor
+    ctx.fillStyle = "#7f8c8d";
+    ctx.fillRect(5, -3, 12, 6);
 
     ctx.restore();
 }
 
-function handlePlayerMovement() {
-    const halfSize = player.size / 2;
-    if ((keys['w'] || keys['arrowup']) && player.y > halfSize) player.y -= player.speed;
-    if ((keys['s'] || keys['arrowdown']) && player.y < canvas.height - halfSize) player.y += player.speed;
-    if ((keys['a'] || keys['arrowleft']) && player.x > halfSize) player.x -= player.speed;
-    if ((keys['d'] || keys['arrowright']) && player.x < canvas.width - halfSize) player.x += player.speed;
+function handleMovement() {
+    if (keys['w'] || keys['arrowup']) player.y = Math.max(player.size, player.y - player.speed);
+    if (keys['s'] || keys['arrowdown']) player.y = Math.min(canvas.height - player.size, player.y + player.speed);
+    if (keys['a'] || keys['arrowleft']) player.x = Math.max(player.size, player.x - player.speed);
+    if (keys['d'] || keys['arrowright']) player.x = Math.min(canvas.width - player.size, player.x + player.speed);
 }
 
 function handleShooting(currentTime) {
     if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
-        bullets.push(new RetroLaser(player.x, player.y, mouse.x, mouse.y));
+        bullets.push(new StandardBullet(player.x, player.y, mouse.x, mouse.y));
         player.lastShotTime = currentTime;
     }
 }
@@ -287,38 +256,35 @@ function handleShooting(currentTime) {
 function spawnLogic(currentTime) {
     if (zombiesSpawned < zombiesToSpawn) {
         if (currentTime - lastSpawnTime >= spawnDelay) {
-            zombies.push(new RetroCubeZombie(wave));
+            zombies.push(new StandardZombie());
             zombiesSpawned++;
             lastSpawnTime = currentTime;
         }
     }
     if (zombies.length === 0 && zombiesSpawned >= zombiesToSpawn) {
         wave++;
-        zombiesToSpawn = wave * 6;
+        zombiesToSpawn = wave * 5;
         zombiesSpawned = 0;
-        spawnDelay = Math.max(350, spawnDelay - 120);
+        spawnDelay = Math.max(400, spawnDelay - 80);
     }
 }
 
 function checkCollisions() {
-    // Laser vs Zombie Outbreak
+    // Bullet hit tracking
     for (let b = bullets.length - 1; b >= 0; b--) {
         for (let z = zombies.length - 1; z >= 0; z--) {
             const dist = Math.hypot(bullets[b].x - zombies[z].x, bullets[b].y - zombies[z].y);
-            if (dist < (bullets[b].size / 2 + zombies[z].size / 2)) {
+            if (dist < (bullets[b].radius + zombies[z].radius)) {
                 
-                // Neon spark splash effects
-                for (let i = 0; i < 6; i++) {
-                    particles.push(new RetroParticle(zombies[z].x, zombies[z].y, "#ff3333"));
+                // Normal impact hits
+                for (let i = 0; i < 4; i++) {
+                    particles.push(new SplatParticle(zombies[z].x, zombies[z].y, "#962d22"));
                 }
                 
                 zombies[z].health -= bullets[b].damage;
                 bullets.splice(b, 1);
 
                 if (zombies[z].health <= 0) {
-                    for (let i = 0; i < 12; i++) {
-                        particles.push(new RetroParticle(zombies[z].x, zombies[z].y, "#33ff33"));
-                    }
                     zombies.splice(z, 1);
                     player.kills++;
                 }
@@ -327,16 +293,11 @@ function checkCollisions() {
         }
     }
 
-    // Zombie vs Player Ingress
+    // Enemy hit player tracking
     for (let z = zombies.length - 1; z >= 0; z--) {
         const dist = Math.hypot(player.x - zombies[z].x, player.y - zombies[z].y);
-        if (dist < (player.size / 2 + zombies[z].size / 2)) {
-            player.health -= 0.6; // Consistent scaling damage track
-            
-            // Cyber damage glitch bits
-            if (Math.random() > 0.8) {
-                particles.push(new RetroParticle(player.x, player.y, "#00ffff"));
-            }
+        if (dist < (player.size / 2 + zombies[z].radius)) {
+            player.health -= 0.4;
             if (player.health <= 0) {
                 player.health = 0;
                 gameOver = true;
@@ -346,22 +307,13 @@ function checkCollisions() {
 }
 
 function updateUI() {
-    hud.innerHTML = `SYSTEM WAVE: 0${wave}<br>THREATS DOWN: ${player.kills}`;
+    hud.innerHTML = `Wave: ${wave} | Kills: ${player.kills}`;
+    healthBar.style.width = `${player.health}%`;
     
-    // Update structural width sizing
-    healthBar.style.width = `${Math.max(0, player.health)}%`;
-    
-    // Dynamic Retro Color Swapping based on critically low systems
-    if (player.health > 45) {
-        healthBar.style.backgroundColor = "#33ff33";
-        healthBar.style.boxShadow = "0 0 8px #33ff33";
-    } else if (player.health > 20) {
-        healthBar.style.backgroundColor = "#ffcc00";
-        healthBar.style.boxShadow = "0 0 8px #ffcc00";
-    } else {
-        healthBar.style.backgroundColor = "#ff3333";
-        healthBar.style.boxShadow = "0 0 8px #ff3333";
-    }
+    // Normal color state changes
+    if (player.health > 50) healthBar.style.backgroundColor = "#27ae60";
+    else if (player.health > 25) healthBar.style.backgroundColor = "#f39c12";
+    else healthBar.style.backgroundColor = "#c0392b";
 }
 
 function resetGame() {
@@ -370,9 +322,8 @@ function resetGame() {
     player.health = 100;
     player.kills = 0;
     wave = 1;
-    zombiesToSpawn = 6;
+    zombiesToSpawn = 5;
     zombiesSpawned = 0;
-    spawnDelay = 1000;
     zombies = [];
     bullets = [];
     particles = [];
@@ -380,17 +331,15 @@ function resetGame() {
 }
 
 function loop(timestamp) {
-    // Retro motion blur trail frame clear
-    ctx.fillStyle = "rgba(5, 8, 12, 0.35)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!gameOver) {
-        handlePlayerMovement();
+        handleMovement();
         handleShooting(timestamp);
         spawnLogic(timestamp);
         checkCollisions();
 
-        // Laser Tracking
+        // Projectiles
         for (let i = bullets.length - 1; i >= 0; i--) {
             bullets[i].update();
             bullets[i].draw();
@@ -399,7 +348,7 @@ function loop(timestamp) {
             }
         }
 
-        // Zombie Engine Processing
+        // Enemies
         zombies.forEach(zombie => {
             zombie.update();
             zombie.draw();
@@ -407,22 +356,19 @@ function loop(timestamp) {
 
         drawPlayer();
     } else {
-        // Neon Game Over Terminal Matrix
-        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+        // Simple gray game over text screen
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.font = "bold 40px 'Courier New'";
-        ctx.fillStyle = "#ff3333";
+        ctx.font = "bold 36px Arial";
+        ctx.fillStyle = "#ffffff";
         ctx.textAlign = "center";
-        ctx.fillText("CRITICAL SYSTEM FAILURE", canvas.width / 2, canvas.height / 2 - 20);
-        
-        ctx.font = "18px 'Courier New'";
-        ctx.fillStyle = "#33ff33";
-        ctx.fillText(`WAVES DEPLOYED: 0${wave}  |  CUBES TERMINATED: ${player.kills}`, canvas.width / 2, canvas.height / 2 + 30);
-        ctx.fillText("PRESS [R] TO REBOOT AND RETRY", canvas.width / 2, canvas.height / 2 + 70);
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = "18px Arial";
+        ctx.fillText(`You reached Wave ${wave} with ${player.kills} kills.`, canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText("Press 'R' to play again", canvas.width / 2, canvas.height / 2 + 50);
     }
 
-    // Processing Matrix Vector Particles
+    // Clear fading hit particles
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update();
         particles[i].draw();
@@ -433,7 +379,6 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 
-// Global initialization sequence
 requestAnimationFrame(loop);
 </script>
 </body>
