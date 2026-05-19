@@ -231,6 +231,7 @@ function resetGame() {
 
 // Render Engine UI
 function drawHUD() {
+    // Left UI elements
     ctx.fillStyle = "white";
     ctx.font = "20px Arial";
     ctx.fillText(`Wave: ${wave}`, 20, 35);
@@ -238,9 +239,33 @@ function drawHUD() {
     ctx.fillStyle = "#ffdf00";
     ctx.fillText(`🥫 Food Cans: ${player.foodCans}`, 20, 65);
 
+    // Right UI elements
     const remaining = (zombiesToSpawn - zombiesSpawned) + zombies.length;
     ctx.fillStyle = "white";
     ctx.fillText(`Zombies Left: ${remaining}`, canvas.width - 180, 35);
+
+    // Top Center Global Health Bar
+    const barWidth = 200;
+    const barHeight = 15;
+    const barX = (canvas.width / 2) - (barWidth / 2);
+    const barY = 20;
+
+    // Health bar label
+    ctx.fillStyle = "white";
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("HEALTH", canvas.width / 2, barY - 5);
+
+    // Red Background container
+    ctx.fillStyle = "#c83232";
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // Green Active Health Gauge
+    ctx.fillStyle = "#32c832";
+    ctx.fillRect(barX, barY, barWidth * (player.health / 100), barHeight);
+
+    // Reset layout configuration alignment
+    ctx.textAlign = "left"; 
 }
 
 function drawPlayer() {
@@ -250,13 +275,6 @@ function drawPlayer() {
     ctx.fillStyle = "#3232c8";
     ctx.fill();
     ctx.closePath();
-
-    // Health bar outline
-    ctx.fillStyle = "#c83232";
-    ctx.fillRect(player.x - 20, player.y - 25, 40, 6);
-    // Dynamic health gauge
-    ctx.fillStyle = "#32c832";
-    ctx.fillRect(player.x - 20, player.y - 25, 40 * (player.health / 100), 6);
 }
 
 function drawGameOver() {
