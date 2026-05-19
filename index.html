@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Survival - Standard Edition</title>
+    <title>Zombie Survival</title>
     <style>
         body {
             margin: 0;
-            background-color: #1a1a1a;
+            background-color: #1c1c1c;
             color: #ffffff;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,78 +19,111 @@
         }
         #game-container {
             position: relative;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
         }
         canvas {
-            background-color: #2e3d30; /* Normal dark green grass/ground color */
-            border: 4px solid #333333;
+            background-color: #2b3a2f; 
             display: block;
             cursor: crosshair;
         }
-        #hud {
+        /* Separated and organized HUD items */
+        #hud-left {
             position: absolute;
-            top: 15px;
-            left: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            top: 20px;
+            left: 25px;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .hud-item {
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            letter-spacing: 0.5px;
+        }
+        #wave-display {
+            color: #f1c40f; /* Distinct gold color for waves */
+            font-size: 22px;
+        }
+        #kills-display {
+            color: #ff4d4d; /* Distinct red color for kills */
+        }
+        #food-display {
+            color: #2ecc71; /* Distinct green color for currency */
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         #health-container {
             position: absolute;
-            top: 15px;
-            right: 20px;
-            width: 200px;
-            height: 20px;
-            background-color: #333333;
-            border: 2px solid #ffffff;
-            border-radius: 4px;
+            top: 20px;
+            right: 25px;
+            width: 220px;
+            height: 16px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
             overflow: hidden;
             pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         #health-bar {
             width: 100%;
             height: 100%;
-            background-color: #27ae60; /* Normal healthy green bar */
-            transition: width 0.1s;
+            background-color: #2ecc71; 
+            border-radius: 20px;
+            transition: width 0.15s cubic-bezier(0.1, 0.8, 0.3, 1);
         }
         #instructions {
-            margin-top: 15px;
-            color: #aaaaaa;
-            font-size: 14px;
+            margin-top: 20px;
+            color: #888888;
+            font-size: 15px;
             text-align: center;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="hud"></div>
+        <canvas id="gameCanvas" width="850" height="650"></canvas>
+        <div id="hud-left">
+            <div id="wave-display" class="hud-item">Wave: 1</div>
+            <div id="kills-display" class="hud-item">Kills: 0</div>
+            <div id="food-display" class="hud-item">Food Cans: 0</div>
+        </div>
         <div id="health-container">
             <div id="health-bar"></div>
         </div>
     </div>
     <div id="instructions">
-        [WASD / Arrow Keys] Move | [Left Click] Shoot | [R] Restart Game
+        Move: [WASD / Arrows] &nbsp;|&nbsp; Shoot: [Left Click] &nbsp;|&nbsp; Restart: [R]
     </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
+
+// UI Elements
+const waveDisplay = document.getElementById("wave-display");
+const killsDisplay = document.getElementById("kills-display");
+const foodDisplay = document.getElementById("food-display");
 const healthBar = document.getElementById("health-bar");
 
-// Game Variables
+// Game Engine Parameters
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    size: 20,
-    speed: 4,
+    radius: 12,
+    speed: 4.2,
     health: 100,
     kills: 0,
+    foodCans: 0,
     lastShotTime: 0,
-    shootCooldown: 150
+    shootCooldown: 140
 };
 
 let keys = {};
@@ -98,14 +131,15 @@ let mouse = { x: 0, y: 0, isPressed: false };
 let zombies = [];
 let bullets = [];
 let particles = [];
+let items = []; // Drop system array
 let wave = 1;
-let zombiesToSpawn = 5;
+let zombiesToSpawn = 6;
 let zombiesSpawned = 0;
 let lastSpawnTime = 0;
-let spawnDelay = 1000;
+let spawnDelay = 900;
 let gameOver = false;
 
-// Controls listeners
+// Event Tracking Systems
 window.addEventListener("keydown", (e) => {
     keys[e.key.toLowerCase()] = true;
     if (gameOver && e.key.toLowerCase() === 'r') resetGame();
@@ -119,21 +153,25 @@ canvas.addEventListener("mousemove", (e) => {
 canvas.addEventListener("mousedown", () => mouse.isPressed = true);
 canvas.addEventListener("mouseup", () => mouse.isPressed = false);
 
-// Classes
-class SplatParticle {
+// Component Structuring Classes
+class BloodParticle {
     constructor(x, y, color) {
         this.x = x;
         this.y = y;
-        this.size = Math.random() * 3 + 2;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
+        this.radius = Math.random() * 2.5 + 1.5;
+        const angle = Math.random() * Math.PI * 2;
+        const force = Math.random() * 3 + 1;
+        this.vx = Math.cos(angle) * force;
+        this.vy = Math.sin(angle) * force;
         this.alpha = 1;
-        this.decay = Math.random() * 0.03 + 0.02;
+        this.decay = Math.random() * 0.04 + 0.02;
         this.color = color;
     }
     update() {
         this.x += this.vx;
         this.y += this.vy;
+        this.vx *= 0.95; 
+        this.vy *= 0.95;
         this.alpha -= this.decay;
     }
     draw() {
@@ -141,25 +179,51 @@ class SplatParticle {
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
 }
 
-class StandardZombie {
-    constructor() {
-        const edges = ['top', 'bottom', 'left', 'right'];
-        const chosenEdge = edges[Math.floor(Math.random() * edges.length)];
-        
-        if (chosenEdge === 'top') { this.x = Math.random() * canvas.width; this.y = -20; }
-        else if (chosenEdge === 'bottom') { this.x = Math.random() * canvas.width; this.y = canvas.height + 20; }
-        else if (chosenEdge === 'left') { this.x = -20; this.y = Math.random() * canvas.height; }
-        else { this.x = canvas.width + 20; this.y = Math.random() * canvas.height; }
+class FoodCanItem {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 10;
+        this.height = 14;
+        this.bounceTimer = Math.random() * 100; // Offset for smooth floating animation
+    }
+    draw() {
+        this.bounceTimer += 0.05;
+        const bounceOffsetY = Math.sin(this.bounceTimer) * 3;
 
-        this.radius = 12;
-        this.health = 30 + (wave * 5);
-        this.speed = 1.5 + Math.min(wave * 0.1, 1.5);
+        ctx.save();
+        ctx.translate(this.x, this.y + bounceOffsetY);
+
+        // Modern, clean flat vector representation of a can
+        ctx.fillStyle = "#bdc3c7"; // Tin color base
+        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+        
+        ctx.fillStyle = "#e74c3c"; // Mid label accent
+        ctx.fillRect(-this.width/2, -this.height/6, this.width, this.height/3);
+
+        ctx.restore();
+    }
+}
+
+class ModernZombie {
+    constructor() {
+        const borderDist = 30;
+        const edgeChoice = Math.floor(Math.random() * 4);
+        
+        if (edgeChoice === 0) { this.x = Math.random() * canvas.width; this.y = -borderDist; }
+        else if (edgeChoice === 1) { this.x = Math.random() * canvas.width; this.y = canvas.height + borderDist; }
+        else if (edgeChoice === 2) { this.x = -borderDist; this.y = Math.random() * canvas.height; }
+        else { this.x = canvas.width + borderDist; this.y = Math.random() * canvas.height; }
+
+        this.radius = 11;
+        this.health = 25 + (wave * 5);
+        this.speed = 1.6 + Math.min(wave * 0.1, 1.4);
     }
     update() {
         const dx = player.x - this.x;
@@ -171,32 +235,28 @@ class StandardZombie {
         }
     }
     draw() {
-        // Normal circular zombie drawing
-        ctx.fillStyle = "#5c8a60"; // Classic zombie rotten green
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#4a6b52"; 
         ctx.fill();
-        ctx.strokeStyle = "#3e5c41";
-        ctx.lineWidth = 2;
-        ctx.stroke();
 
-        // Simple eyes looking toward target direction
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        ctx.fillStyle = "#ff4d4d"; // Normal dark red eyes
+        
+        ctx.fillStyle = "#e74c3c";
         ctx.beginPath();
-        ctx.arc(this.x + Math.cos(angle + 0.4) * 6, this.y + Math.sin(angle + 0.4) * 6, 2, 0, Math.PI * 2);
-        ctx.arc(this.x + Math.cos(angle - 0.4) * 6, this.y + Math.sin(angle - 0.4) * 6, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + Math.cos(angle + 0.35) * 6, this.y + Math.sin(angle + 0.35) * 6, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + Math.cos(angle - 0.35) * 6, this.y + Math.sin(angle - 0.35) * 6, 2, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-class StandardBullet {
+class ModernBullet {
     constructor(startX, startY, targetX, targetY) {
         this.x = startX;
         this.y = startY;
-        this.radius = 3;
-        this.speed = 12;
-        this.damage = 20;
+        this.radius = 2.5;
+        this.speed = 14;
+        this.damage = 25;
         const dx = targetX - startX;
         const dy = targetY - startY;
         const dist = Math.hypot(dx, dy);
@@ -208,14 +268,14 @@ class StandardBullet {
         this.y += this.dy;
     }
     draw() {
-        ctx.fillStyle = "#f39c12"; // Standard bright yellow bullet
+        ctx.fillStyle = "#f1c40f"; 
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-// Logic Loops
+// Logic Pipelines
 function drawPlayer() {
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     
@@ -223,32 +283,38 @@ function drawPlayer() {
     ctx.translate(player.x, player.y);
     ctx.rotate(angle);
 
-    // Player body circle
-    ctx.fillStyle = "#3498db"; // Clean blue hero
     ctx.beginPath();
-    ctx.arc(0, 0, player.size / 2, 0, Math.PI * 2);
+    ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#3498db"; 
     ctx.fill();
-    ctx.strokeStyle = "#2980b9";
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
-    // Weapon barrel line pointing toward cursor
-    ctx.fillStyle = "#7f8c8d";
-    ctx.fillRect(5, -3, 12, 6);
+    ctx.fillStyle = "#555555";
+    ctx.fillRect(4, -2.5, 12, 5);
 
     ctx.restore();
 }
 
 function handleMovement() {
-    if (keys['w'] || keys['arrowup']) player.y = Math.max(player.size, player.y - player.speed);
-    if (keys['s'] || keys['arrowdown']) player.y = Math.min(canvas.height - player.size, player.y + player.speed);
-    if (keys['a'] || keys['arrowleft']) player.x = Math.max(player.size, player.x - player.speed);
-    if (keys['d'] || keys['arrowright']) player.x = Math.min(canvas.width - player.size, player.x + player.speed);
+    let dx = 0;
+    let dy = 0;
+
+    if (keys['w'] || keys['arrowup']) dy -= 1;
+    if (keys['s'] || keys['arrowdown']) dy += 1;
+    if (keys['a'] || keys['arrowleft']) dx -= 1;
+    if (keys['d'] || keys['arrowright']) dx += 1;
+
+    if (dx !== 0 && dy !== 0) {
+        dx *= 0.7071;
+        dy *= 0.7071;
+    }
+
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x + dx * player.speed));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y + dy * player.speed));
 }
 
 function handleShooting(currentTime) {
     if (mouse.isPressed && (currentTime - player.lastShotTime >= player.shootCooldown)) {
-        bullets.push(new StandardBullet(player.x, player.y, mouse.x, mouse.y));
+        bullets.push(new ModernBullet(player.x, player.y, mouse.x, mouse.y));
         player.lastShotTime = currentTime;
     }
 }
@@ -256,7 +322,7 @@ function handleShooting(currentTime) {
 function spawnLogic(currentTime) {
     if (zombiesSpawned < zombiesToSpawn) {
         if (currentTime - lastSpawnTime >= spawnDelay) {
-            zombies.push(new StandardZombie());
+            zombies.push(new ModernZombie());
             zombiesSpawned++;
             lastSpawnTime = currentTime;
         }
@@ -265,26 +331,29 @@ function spawnLogic(currentTime) {
         wave++;
         zombiesToSpawn = wave * 5;
         zombiesSpawned = 0;
-        spawnDelay = Math.max(400, spawnDelay - 80);
+        spawnDelay = Math.max(300, spawnDelay - 70);
     }
 }
 
 function checkCollisions() {
-    // Bullet hit tracking
+    // Bullet / Zombie collisions
     for (let b = bullets.length - 1; b >= 0; b--) {
         for (let z = zombies.length - 1; z >= 0; z--) {
             const dist = Math.hypot(bullets[b].x - zombies[z].x, bullets[b].y - zombies[z].y);
             if (dist < (bullets[b].radius + zombies[z].radius)) {
                 
-                // Normal impact hits
-                for (let i = 0; i < 4; i++) {
-                    particles.push(new SplatParticle(zombies[z].x, zombies[z].y, "#962d22"));
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new BloodParticle(zombies[z].x, zombies[z].y, "#c0392b"));
                 }
                 
                 zombies[z].health -= bullets[b].damage;
                 bullets.splice(b, 1);
 
                 if (zombies[z].health <= 0) {
+                    // 40% chance to drop a food can currency item upon death
+                    if (Math.random() < 0.40) {
+                        items.push(new FoodCanItem(zombies[z].x, zombies[z].y));
+                    }
                     zombies.splice(z, 1);
                     player.kills++;
                 }
@@ -293,11 +362,21 @@ function checkCollisions() {
         }
     }
 
-    // Enemy hit player tracking
+    // Item Collection processing loop
+    for (let i = items.length - 1; i >= 0; i--) {
+        const dist = Math.hypot(player.x - items[i].x, player.y - items[i].y);
+        // Collision boundary check for item picking
+        if (dist < (player.radius + items[i].width)) {
+            player.foodCans++;
+            items.splice(i, 1);
+        }
+    }
+
+    // Zombie / Player collision
     for (let z = zombies.length - 1; z >= 0; z--) {
         const dist = Math.hypot(player.x - zombies[z].x, player.y - zombies[z].y);
-        if (dist < (player.size / 2 + zombies[z].radius)) {
-            player.health -= 0.4;
+        if (dist < (player.radius + zombies[z].radius)) {
+            player.health -= 0.5;
             if (player.health <= 0) {
                 player.health = 0;
                 gameOver = true;
@@ -307,13 +386,15 @@ function checkCollisions() {
 }
 
 function updateUI() {
-    hud.innerHTML = `Wave: ${wave} | Kills: ${player.kills}`;
+    waveDisplay.innerText = `Wave: ${wave}`;
+    killsDisplay.innerText = `Kills: ${player.kills}`;
+    foodDisplay.innerText = `Food Cans: ${player.foodCans}`;
+    
     healthBar.style.width = `${player.health}%`;
     
-    // Normal color state changes
-    if (player.health > 50) healthBar.style.backgroundColor = "#27ae60";
-    else if (player.health > 25) healthBar.style.backgroundColor = "#f39c12";
-    else healthBar.style.backgroundColor = "#c0392b";
+    if (player.health > 50) healthBar.style.backgroundColor = "#2ecc71";
+    else if (player.health > 25) healthBar.style.backgroundColor = "#e67e22";
+    else healthBar.style.backgroundColor = "#e74c3c";
 }
 
 function resetGame() {
@@ -321,12 +402,14 @@ function resetGame() {
     player.y = canvas.height / 2;
     player.health = 100;
     player.kills = 0;
+    player.foodCans = 0;
     wave = 1;
-    zombiesToSpawn = 5;
+    zombiesToSpawn = 6;
     zombiesSpawned = 0;
     zombies = [];
     bullets = [];
     particles = [];
+    items = [];
     gameOver = false;
 }
 
@@ -339,7 +422,10 @@ function loop(timestamp) {
         spawnLogic(timestamp);
         checkCollisions();
 
-        // Projectiles
+        // Items rendering
+        items.forEach(item => item.draw());
+
+        // Render Bullets
         for (let i = bullets.length - 1; i >= 0; i--) {
             bullets[i].update();
             bullets[i].draw();
@@ -348,7 +434,7 @@ function loop(timestamp) {
             }
         }
 
-        // Enemies
+        // Render Zombies
         zombies.forEach(zombie => {
             zombie.update();
             zombie.draw();
@@ -356,19 +442,23 @@ function loop(timestamp) {
 
         drawPlayer();
     } else {
-        // Simple gray game over text screen
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillStyle = "rgba(20, 20, 20, 0.85)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = "bold 36px Arial";
+        
+        ctx.font = "600 36px -apple-system, BlinkMacSystemFont, sans-serif";
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = "18px Arial";
-        ctx.fillText(`You reached Wave ${wave} with ${player.kills} kills.`, canvas.width / 2, canvas.height / 2 + 15);
-        ctx.fillText("Press 'R' to play again", canvas.width / 2, canvas.height / 2 + 50);
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 40);
+        
+        ctx.font = "16px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillStyle = "#aaaaaa";
+        ctx.fillText(`Wave Reached: ${wave}`, canvas.width / 2, canvas.height / 2 + 10);
+        ctx.fillText(`Total Kills: ${player.kills}`, canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillText(`Food Cans Salvaged: ${player.foodCans}`, canvas.width / 2, canvas.height / 2 + 60);
+        ctx.fillText("Press 'R' to play again", canvas.width / 2, canvas.height / 2 + 110);
     }
 
-    // Clear fading hit particles
+    // Particle Handling Animation
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update();
         particles[i].draw();
