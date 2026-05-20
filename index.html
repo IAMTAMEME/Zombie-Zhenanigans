@@ -101,18 +101,18 @@
             z-index: 5;
         }
 
-        /* Gun Shop Overlay Framework */
+        /* Gun Shop UI Window Layout Styles */
         #shop-ui {
             display: none;
             position: absolute;
-            top: -450px;
+            top: -500px;
             left: 100px;
             width: 600px;
             background: rgba(20, 20, 20, 0.95);
             border: 4px solid #ffcc00;
             border-radius: 10px;
             box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
-            padding: 20px;
+            padding: 25px;
             box-sizing: border-box;
             text-align: center;
             z-index: 20;
@@ -120,63 +120,74 @@
         }
         #shop-ui.active {
             display: block;
-            top: 80px;
+            top: 60px;
         }
         #shop-title {
             font-size: 28px;
             color: #ffcc00;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             letter-spacing: 2px;
             font-weight: bold;
         }
-        .shop-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #2a2a2a;
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #444;
-        }
-        .item-info {
-            text-align: left;
-        }
-        .item-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-        }
-        .item-desc {
-            font-size: 13px;
-            color: #aaa;
-            margin-top: 4px;
-        }
-        /* Completely Blank Buttons */
+        
+        /* Large, Informative Weapon Buttons (No outside text elements) */
         .shop-btn {
-            width: 120px;
-            height: 40px;
+            width: 100%;
+            margin: 12px 0;
+            padding: 15px;
             background: #00ff66;
+            color: #111;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s;
+            font-family: Arial, sans-serif;
+            transition: background 0.2s, transform 0.1s;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         .shop-btn:hover {
             background: #00cc52;
+            transform: translateY(-1px);
+        }
+        .shop-btn:active {
+            transform: translateY(1px);
         }
         .shop-btn:disabled {
             background: #444;
+            color: #777;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
+        
+        /* Direct Text Hierarchy Structuring Inside Buttons */
+        .btn-title {
+            font-size: 18px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .btn-desc {
+            font-size: 13px;
+            opacity: 0.85;
+            display: block;
+        }
+
+        /* Large Skip Button Styling */
         #skip-shop-btn {
-            margin-top: 15px;
             width: 100%;
-            height: 40px;
+            margin-top: 20px;
+            padding: 15px;
             background: #ff3333;
+            color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         #skip-shop-btn:hover {
             background: #cc2424;
@@ -287,31 +298,30 @@
             <button id="restart" onclick="resetGame()">Try Again</button>
         </div>
 
-        <!-- Gun Shop HTML Window Overlay -->
+        <!-- Gun Shop Window Overlay -->
         <div id="shop-ui">
             <div id="shop-title">🛒 GUN SHOP</div>
-            <div class="shop-row">
-                <div class="item-info">
-                    <div class="item-name">Speed Loader (Cost: 15 Cans)</div>
-                    <div class="item-desc">Reduces your fire cooldown rate permanently.</div>
-                </div>
-                <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)"></button>
-            </div>
-            <div class="shop-row">
-                <div class="item-info">
-                    <div class="item-name">Heavy Caliber (Cost: 20 Cans)</div>
-                    <div class="item-desc">Increases your weapon bullet size.</div>
-                </div>
-                <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)"></button>
-            </div>
-            <div class="shop-row">
-                <div class="item-info">
-                    <div class="item-name">Light Footwork (Cost: 25 Cans)</div>
-                    <div class="item-desc">Increases player walking movement speed.</div>
-                </div>
-                <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)"></button>
-            </div>
-            <button id="skip-shop-btn" onclick="closeShop()"></button>
+            
+            <!-- Weapon Upgrades containing internal label lines -->
+            <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)">
+                <span class="btn-title">Speed Loader (🥫 15 Cans)</span>
+                <span class="btn-desc">Reduces your fire cooldown rate permanently.</span>
+            </button>
+            
+            <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)">
+                <span class="btn-title">Heavy Caliber Projectiles (🥫 20 Cans)</span>
+                <span class="btn-desc">Increases weapon bullet sizing scales significantly.</span>
+            </button>
+            
+            <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)">
+                <span class="btn-title">Lightweight Combat Boots (🥫 25 Cans)</span>
+                <span class="btn-desc">Increases player running movement velocity.</span>
+            </button>
+
+            <!-- Working Skip Button -->
+            <button id="skip-shop-btn" onclick="closeShop()">
+                SKIP SHOP & START NEXT WAVE
+            </button>
         </div>
 
         <!-- Cheat Menu UI Window -->
@@ -441,9 +451,9 @@
 
         function openShop() {
             isShopOpen = true;
-            keys = {}; // Stop active keyboard momentum strings
+            keys = {}; // Clear stuck key events
             
-            // Handle active/disabled states depending on player can savings balance
+            // Manage button lockouts directly
             document.getElementById("btn-loader").disabled = foodCans < 15;
             document.getElementById("btn-caliber").disabled = foodCans < 20;
             document.getElementById("btn-boots").disabled = foodCans < 25;
@@ -465,11 +475,10 @@
         function closeShop() {
             shopUiEl.classList.remove("active");
             isShopOpen = false;
-            // Force the wave tracker engine status forward
-            waveState = "READY_TO_START"; 
+            waveState = "READY_TO_START"; // Advances the loop safely
         }
 
-        /* Cheat System */
+        /* Cheat Mechanics */
         function tryOpenHacks() {
             let pass = prompt("Enter Secret Code:");
             if (pass === "0000") {
@@ -506,7 +515,6 @@
         function cheatGiveCans() {
             foodCans += 100;
             foodCansEl.innerText = foodCans;
-            // Update disabled button status real-time if panel remains open
             if(isShopOpen) {
                 document.getElementById("btn-loader").disabled = foodCans < 15;
                 document.getElementById("btn-caliber").disabled = foodCans < 20;
@@ -529,7 +537,7 @@
 
             player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-            if (isShopOpen) return; // Completely freeze weapon game tracking processes
+            if (isShopOpen) return; 
 
             if (zombies.length === 0 && waveState === "READY_TO_START") {
                 if (currentWave > 0 && currentWave % 10 === 0) {
