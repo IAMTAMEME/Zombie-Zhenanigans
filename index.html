@@ -100,11 +100,12 @@
             text-align: center;
             z-index: 5;
         }
-        /* Shop UI */
+
+        /* Gun Shop Overlay Framework */
         #shop-ui {
             display: none;
             position: absolute;
-            top: -400px;
+            top: -450px;
             left: 100px;
             width: 600px;
             background: rgba(20, 20, 20, 0.95);
@@ -115,11 +116,11 @@
             box-sizing: border-box;
             text-align: center;
             z-index: 20;
-            transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: top 0.4s ease-out;
         }
         #shop-ui.active {
             display: block;
-            top: 100px;
+            top: 80px;
         }
         #shop-title {
             font-size: 28px;
@@ -151,12 +152,11 @@
             color: #aaa;
             margin-top: 4px;
         }
+        /* Completely Blank Buttons */
         .shop-btn {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
+            width: 120px;
+            height: 40px;
             background: #00ff66;
-            color: #111;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -167,19 +167,21 @@
         }
         .shop-btn:disabled {
             background: #444;
-            color: #777;
             cursor: not-allowed;
         }
         #skip-shop-btn {
             margin-top: 15px;
+            width: 100%;
+            height: 40px;
             background: #ff3333;
-            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
         #skip-shop-btn:hover {
             background: #cc2424;
         }
 
-        /* Updated Hack Button: Now fixed to bottom left inside container */
         #hack-trigger-btn {
             position: absolute;
             bottom: 15px;
@@ -277,7 +279,6 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         
-        <!-- Renamed secret button absolute-positioned in the bottom left -->
         <button id="hack-trigger-btn" onclick="tryOpenHacks()">????</button>
 
         <div id="wave-banner">WAVE 1</div>
@@ -286,31 +287,31 @@
             <button id="restart" onclick="resetGame()">Try Again</button>
         </div>
 
-        <!-- Gun Shop UI Element -->
+        <!-- Gun Shop HTML Window Overlay -->
         <div id="shop-ui">
-            <div id="shop-title">🛒 AMMO & GUN SHOP</div>
+            <div id="shop-title">🛒 GUN SHOP</div>
             <div class="shop-row">
                 <div class="item-info">
-                    <div class="item-name">Speed Loader</div>
+                    <div class="item-name">Speed Loader (Cost: 15 Cans)</div>
                     <div class="item-desc">Reduces your fire cooldown rate permanently.</div>
                 </div>
-                <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)">🥫 15 Cans</button>
+                <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)"></button>
             </div>
             <div class="shop-row">
                 <div class="item-info">
-                    <div class="item-name">Heavy Caliber</div>
-                    <div class="item-desc">Increases your heavy bullet sizes.</div>
+                    <div class="item-name">Heavy Caliber (Cost: 20 Cans)</div>
+                    <div class="item-desc">Increases your weapon bullet size.</div>
                 </div>
-                <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)">🥫 20 Cans</button>
+                <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)"></button>
             </div>
             <div class="shop-row">
                 <div class="item-info">
-                    <div class="item-name">Light Footwork</div>
-                    <div class="item-desc">Increases player running movement speed.</div>
+                    <div class="item-name">Light Footwork (Cost: 25 Cans)</div>
+                    <div class="item-desc">Increases player walking movement speed.</div>
                 </div>
-                <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)">🥫 25 Cans</button>
+                <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)"></button>
             </div>
-            <button class="shop-btn" id="skip-shop-btn" onclick="closeShop()">Skip Shop</button>
+            <button id="skip-shop-btn" onclick="closeShop()"></button>
         </div>
 
         <!-- Cheat Menu UI Window -->
@@ -440,10 +441,13 @@
 
         function openShop() {
             isShopOpen = true;
-            keys = {};
+            keys = {}; // Stop active keyboard momentum strings
+            
+            // Handle active/disabled states depending on player can savings balance
             document.getElementById("btn-loader").disabled = foodCans < 15;
             document.getElementById("btn-caliber").disabled = foodCans < 20;
             document.getElementById("btn-boots").disabled = foodCans < 25;
+
             shopUiEl.classList.add("active");
         }
 
@@ -461,10 +465,11 @@
         function closeShop() {
             shopUiEl.classList.remove("active");
             isShopOpen = false;
-            waveState = "READY_TO_START";
+            // Force the wave tracker engine status forward
+            waveState = "READY_TO_START"; 
         }
 
-        /* Cheat Mechanics */
+        /* Cheat System */
         function tryOpenHacks() {
             let pass = prompt("Enter Secret Code:");
             if (pass === "0000") {
@@ -484,6 +489,8 @@
                 currentWave = val - 1;
                 zombies = [];
                 bullets = [];
+                isShopOpen = false;
+                shopUiEl.classList.remove("active");
                 waveState = "READY_TO_START";
             }
         }
@@ -499,10 +506,30 @@
         function cheatGiveCans() {
             foodCans += 100;
             foodCansEl.innerText = foodCans;
+            // Update disabled button status real-time if panel remains open
+            if(isShopOpen) {
+                document.getElementById("btn-loader").disabled = foodCans < 15;
+                document.getElementById("btn-caliber").disabled = foodCans < 20;
+                document.getElementById("btn-boots").disabled = foodCans < 25;
+            }
         }
 
         function update(time) {
-            if (gameOver || isShopOpen) return;
+            if (gameOver) return;
+
+            if (!isShopOpen) {
+                if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+                if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+                if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+                if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+                player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+                player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
+            }
+
+            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+            if (isShopOpen) return; // Completely freeze weapon game tracking processes
 
             if (zombies.length === 0 && waveState === "READY_TO_START") {
                 if (currentWave > 0 && currentWave % 10 === 0) {
@@ -514,7 +541,7 @@
             }
 
             if (hackTriggerbotActive && zombies.length > 0) {
-                let closestZombie = zombies[0];
+                let closestZombie = zombies;
                 let minDist = Math.hypot(closestZombie.x - player.x, closestZombie.y - player.y);
                 
                 for(let i = 1; i < zombies.length; i++) {
@@ -528,16 +555,6 @@
                 mouse.y = closestZombie.y;
                 shoot();
             }
-
-            if (keys['w'] || keys['arrowup']) player.y -= player.speed;
-            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
-            if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
-            if (keys['d'] || keys['arrowright']) player.x += player.speed;
-
-            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-
-            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
             for (let i = bullets.length - 1; i >= 0; i--) {
                 let b = bullets[i];
@@ -609,6 +626,8 @@
             ctx.fillRect(0, -4, 25, 8);
             ctx.restore();
 
+            if (isShopOpen) return; 
+
             ctx.fillStyle = "#ffcc00";
             bullets.forEach(b => {
                 ctx.beginPath();
@@ -650,7 +669,7 @@
             });
 
             const timeSinceLastShot = performance.now() - lastShootTime;
-            if (timeSinceLastShot < shootCooldown && !isShopOpen) {
+            if (timeSinceLastShot < shootCooldown) {
                 const progress = timeSinceLastShot / shootCooldown;
                 ctx.beginPath();
                 ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
