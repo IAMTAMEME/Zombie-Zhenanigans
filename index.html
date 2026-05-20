@@ -47,21 +47,32 @@
             background-color: #00ff66;
             transition: width 0.1s ease;
         }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+        }
         canvas {
             background-color: #1a1a1a;
             border: 4px solid #333;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
             cursor: crosshair;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         #gameover {
             display: none;
             position: absolute;
+            width: 100%;
+            top: 40%;
             font-size: 48px;
             color: #ff3333;
             font-weight: bold;
             text-shadow: 2px 2px #000;
             text-align: center;
             line-height: 1.6;
+            z-index: 10;
         }
         #restart {
             margin-top: 25px;
@@ -76,6 +87,8 @@
         }
         #wave-banner {
             position: absolute;
+            width: 100%;
+            top: 45%;
             font-size: 64px;
             color: #ffcc00;
             font-weight: bold;
@@ -84,6 +97,86 @@
             transition: opacity 0.3s ease;
             pointer-events: none;
             letter-spacing: 4px;
+            text-align: center;
+            z-index: 5;
+        }
+        /* Gun Shop UI Styles */
+        #shop-ui {
+            display: none;
+            position: absolute;
+            top: -400px;
+            left: 100px;
+            width: 600px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 4px solid #ffcc00;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            z-index: 20;
+            transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #shop-ui.active {
+            display: block;
+            top: 100px;
+        }
+        #shop-title {
+            font-size: 28px;
+            color: #ffcc00;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+        .shop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2a2a2a;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        .item-info {
+            text-align: left;
+        }
+        .item-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .item-desc {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+        .shop-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #00ff66;
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .shop-btn:hover {
+            background: #00cc52;
+        }
+        .shop-btn:disabled {
+            background: #444;
+            color: #777;
+            cursor: not-allowed;
+        }
+        #skip-shop-btn {
+            margin-top: 15px;
+            background: #ff3333;
+            color: white;
+        }
+        #skip-shop-btn:hover {
+            background: #cc2424;
         }
     </style>
 </head>
@@ -97,11 +190,41 @@
         <div>Wave: <span id="wave">0</span></div>
         <div>Food-cans: 🥫 <span id="foodCans">0</span></div>
     </div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <div id="wave-banner">WAVE 1</div>
-    <div id="gameover">
-        GAME OVER <br>
-        <button id="restart" onclick="resetGame()">Try Again</button>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="wave-banner">WAVE 1</div>
+        <div id="gameover">
+            GAME OVER <br>
+            <button id="restart" onclick="resetGame()">Try Again</button>
+        </div>
+
+        <!-- Gun Shop UI Element -->
+        <div id="shop-ui">
+            <div id="shop-title">🛒 AMMO & GUN SHOP</div>
+            <div class="shop-row">
+                <div class="item-info">
+                    <div class="item-name">Speed Loader</div>
+                    <div class="item-desc">Reduces your fire cooldown rate permanently.</div>
+                </div>
+                <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)">🥫 15 Cans</button>
+            </div>
+            <div class="shop-row">
+                <div class="item-info">
+                    <div class="item-name">Heavy Caliber</div>
+                    <div class="item-desc">Increases your heavy bullet sizes.</div>
+                </div>
+                <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)">🥫 20 Cans</button>
+            </div>
+            <div class="shop-row">
+                <div class="item-info">
+                    <div class="item-name">Light Footwork</div>
+                    <div class="item-desc">Increases player running movement speed.</div>
+                </div>
+                <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)">🥫 25 Cans</button>
+            </div>
+            <button class="shop-btn" id="skip-shop-btn" onclick="closeShop()">Skip Shop</button>
+        </div>
     </div>
 
     <script>
@@ -112,6 +235,7 @@
         const healthBarEl = document.getElementById("health-bar");
         const gameoverEl = document.getElementById("gameover");
         const waveBanner = document.getElementById("wave-banner");
+        const shopUiEl = document.getElementById("shop-ui");
 
         // Game State
         let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
@@ -121,14 +245,16 @@
         let mouse = { x: 0, y: 0 };
         let foodCans = 0;
         let gameOver = false;
-        const shootCooldown = 500;
+        let shootCooldown = 500;
+        let bulletSize = 4;
         let lastShootTime = 0;
         let currentWave = 0;
         let waveState = "READY_TO_START";
         let lastHitTime = 0;
         const hitCooldown = 400;
+        let isShopOpen = false;
 
-        window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
+        window.addEventListener("keydown", (e) => { if(!isShopOpen) keys[e.key.toLowerCase()] = true; });
         window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
 
         canvas.addEventListener("mousemove", (e) => {
@@ -138,7 +264,7 @@
         });
 
         canvas.addEventListener("mousedown", () => {
-            if (!gameOver) shoot();
+            if (!gameOver && !isShopOpen) shoot();
         });
 
         function shoot() {
@@ -152,7 +278,7 @@
                     y: player.y,
                     vx: Math.cos(angle) * 8,
                     vy: Math.sin(angle) * 8,
-                    size: 4
+                    size: bulletSize
                 });
                 lastShootTime = currentTime;
             }
@@ -190,15 +316,55 @@
                 x: x,
                 y: y,
                 size: 16,
-                speed: 1.5, // Standardized locked speed for all waves
+                speed: 1.5,
                 angle: 0
             });
         }
 
+        function openShop() {
+            isShopOpen = true;
+            keys = {}; // Clear active key movements
+            
+            // Check button element availabilities based on player budget
+            document.getElementById("btn-loader").disabled = foodCans < 15;
+            document.getElementById("btn-caliber").disabled = foodCans < 20;
+            document.getElementById("btn-boots").disabled = foodCans < 25;
+
+            shopUiEl.classList.add("active");
+        }
+
+        function buyItem(item, cost) {
+            if (foodCans >= cost) {
+                foodCans -= cost;
+                foodCansEl.innerText = foodCans;
+                
+                if (item === 'loader') {
+                    shootCooldown = Math.max(150, shootCooldown - 75); // Shorter weapon cool down
+                } else if (item === 'caliber') {
+                    bulletSize += 3; // Bigger projectiles
+                } else if (item === 'boots') {
+                    player.speed += 0.8; // Faster player running speed
+                }
+                closeShop();
+            }
+        }
+
+        function closeShop() {
+            shopUiEl.classList.remove("active");
+            isShopOpen = false;
+            waveState = "READY_TO_START"; // Triggers the calculation engine to build next wave setup
+        }
+
         function update(time) {
-            if (gameOver) return;
+            if (gameOver || isShopOpen) return;
 
             if (zombies.length === 0 && waveState === "READY_TO_START") {
+                // If a wave was just beaten, check if we reached an interval of 10 waves
+                if (currentWave > 0 && currentWave % 10 === 0) {
+                    waveState = "SHOPPING";
+                    openShop();
+                    return;
+                }
                 startNextWave();
             }
 
@@ -321,7 +487,7 @@
             });
 
             const timeSinceLastShot = performance.now() - lastShootTime;
-            if (timeSinceLastShot < shootCooldown) {
+            if (timeSinceLastShot < shootCooldown && !isShopOpen) {
                 const progress = timeSinceLastShot / shootCooldown;
                 ctx.beginPath();
                 ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
@@ -344,7 +510,10 @@
             foodCans = 0;
             currentWave = 0;
             lastShootTime = 0;
+            shootCooldown = 500;
+            bulletSize = 4;
             gameOver = false;
+            isShopOpen = false;
             waveState = "READY_TO_START";
             foodCansEl.innerText = foodCans;
             waveEl.innerText = 0;
@@ -352,6 +521,7 @@
             healthBarEl.style.backgroundColor = "#00ff66";
             gameoverEl.style.display = "none";
             waveBanner.style.opacity = "0";
+            shopUiEl.classList.remove("active");
         }
 
         requestAnimationFrame(loop);
