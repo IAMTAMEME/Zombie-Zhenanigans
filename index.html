@@ -100,7 +100,7 @@
             text-align: center;
             z-index: 5;
         }
-        /* Gun Shop UI Styles */
+        /* Shop UI */
         #shop-ui {
             display: none;
             position: absolute;
@@ -178,11 +178,86 @@
         #skip-shop-btn:hover {
             background: #cc2424;
         }
+
+        /* Hack UI Core Styles */
+        #hack-trigger-btn {
+            background: #ff0055;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 5px 10px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #hack-trigger-btn:hover {
+            background: #cc0044;
+        }
+        #cheat-menu {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 250px;
+            width: 300px;
+            background: rgba(35, 15, 15, 0.95);
+            border: 3px dashed #ff0055;
+            border-radius: 8px;
+            padding: 15px;
+            box-sizing: border-box;
+            z-index: 30;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.5);
+        }
+        .cheat-title {
+            font-size: 20px;
+            color: #ff0055;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .cheat-item {
+            margin: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .cheat-input {
+            width: 60px;
+            background: #222;
+            border: 1px solid #ff0055;
+            color: #fff;
+            padding: 4px;
+            text-align: center;
+            border-radius: 3px;
+        }
+        .cheat-btn {
+            background: #ff0055;
+            color: #fff;
+            border: none;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+        .cheat-btn:hover {
+            background: #cc0044;
+        }
+        .cheat-close-btn {
+            width: 100%;
+            margin-top: 10px;
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div>ZOMBIE ZHENGANINZANS</div>
+        <button id="hack-trigger-btn" onclick="tryOpenHacks()">⚠️ HACK</button>
         <div style="display: flex; align-items: center;">
             <span class="hp-label">HP:</span>
             <div id="health-container"><div id="health-bar"></div></div>
@@ -225,6 +300,31 @@
             </div>
             <button class="shop-btn" id="skip-shop-btn" onclick="closeShop()">Skip Shop</button>
         </div>
+
+        <!-- Cheat Menu UI Window -->
+        <div id="cheat-menu">
+            <div class="cheat-title">💀 MOD MENU MATRIX</div>
+            <div class="cheat-item">
+                <label>Set Target Wave:</label>
+                <div>
+                    <input type="number" id="cheat-wave-num" class="cheat-input" value="1">
+                    <button class="cheat-btn" onclick="cheatSetWave()">Set</button>
+                </div>
+            </div>
+            <div class="cheat-item">
+                <label>Trigger Bot Auto-Fire:</label>
+                <input type="checkbox" id="cheat-triggerbot" onchange="toggleTriggerbot(this.checked)">
+            </div>
+            <div class="cheat-item">
+                <label>Invisibility / Godmode:</label>
+                <input type="checkbox" id="cheat-invisible" onchange="toggleInvisibility(this.checked)">
+            </div>
+            <div class="cheat-item">
+                <label>Add 100 Cans Cash:</label>
+                <button class="cheat-btn" onclick="cheatGiveCans()">+100</button>
+            </div>
+            <button class="cheat-close-btn" onclick="closeCheatMenu()">Close Matrix</button>
+        </div>
     </div>
 
     <script>
@@ -236,6 +336,7 @@
         const gameoverEl = document.getElementById("gameover");
         const waveBanner = document.getElementById("wave-banner");
         const shopUiEl = document.getElementById("shop-ui");
+        const cheatMenuEl = document.getElementById("cheat-menu");
 
         // Game State
         let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
@@ -253,6 +354,10 @@
         let lastHitTime = 0;
         const hitCooldown = 400;
         let isShopOpen = false;
+
+        // Hack Toggles
+        let hackTriggerbotActive = false;
+        let hackInvisibilityActive = false;
 
         window.addEventListener("keydown", (e) => { if(!isShopOpen) keys[e.key.toLowerCase()] = true; });
         window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
@@ -323,13 +428,10 @@
 
         function openShop() {
             isShopOpen = true;
-            keys = {}; // Clear active key movements
-            
-            // Check button element availabilities based on player budget
+            keys = {};
             document.getElementById("btn-loader").disabled = foodCans < 15;
             document.getElementById("btn-caliber").disabled = foodCans < 20;
             document.getElementById("btn-boots").disabled = foodCans < 25;
-
             shopUiEl.classList.add("active");
         }
 
@@ -337,14 +439,9 @@
             if (foodCans >= cost) {
                 foodCans -= cost;
                 foodCansEl.innerText = foodCans;
-                
-                if (item === 'loader') {
-                    shootCooldown = Math.max(150, shootCooldown - 75); // Shorter weapon cool down
-                } else if (item === 'caliber') {
-                    bulletSize += 3; // Bigger projectiles
-                } else if (item === 'boots') {
-                    player.speed += 0.8; // Faster player running speed
-                }
+                if (item === 'loader') shootCooldown = Math.max(150, shootCooldown - 75);
+                else if (item === 'caliber') bulletSize += 3;
+                else if (item === 'boots') player.speed += 0.8;
                 closeShop();
             }
         }
@@ -352,20 +449,74 @@
         function closeShop() {
             shopUiEl.classList.remove("active");
             isShopOpen = false;
-            waveState = "READY_TO_START"; // Triggers the calculation engine to build next wave setup
+            waveState = "READY_TO_START";
+        }
+
+        /* Cheat Mechanics Panel Implementations */
+        function tryOpenHacks() {
+            let pass = prompt("Enter Hack Interface Code:");
+            if (pass === "0000") {
+                cheatMenuEl.style.display = "block";
+            } else {
+                alert("ACCESS DENIED: INVALID KEY CODE");
+            }
+        }
+
+        function closeCheatMenu() {
+            cheatMenuEl.style.display = "none";
+        }
+
+        function cheatSetWave() {
+            let val = parseInt(document.getElementById("cheat-wave-num").value);
+            if (!isNaN(val) && val >= 0) {
+                currentWave = val - 1; // Subtract 1 so next generation hits target accurately
+                zombies = [];
+                bullets = [];
+                waveState = "READY_TO_START";
+            }
+        }
+
+        function toggleTriggerbot(checked) {
+            hackTriggerbotActive = checked;
+        }
+
+        function toggleInvisibility(checked) {
+            hackInvisibilityActive = checked;
+        }
+
+        function cheatGiveCans() {
+            foodCans += 100;
+            foodCansEl.innerText = foodCans;
         }
 
         function update(time) {
             if (gameOver || isShopOpen) return;
 
             if (zombies.length === 0 && waveState === "READY_TO_START") {
-                // If a wave was just beaten, check if we reached an interval of 10 waves
                 if (currentWave > 0 && currentWave % 10 === 0) {
                     waveState = "SHOPPING";
                     openShop();
                     return;
                 }
                 startNextWave();
+            }
+
+            // Hack: Triggerbot Engine Core Execution
+            if (hackTriggerbotActive && zombies.length > 0) {
+                let closestZombie = zombies[0];
+                let minDist = Math.hypot(closestZombie.x - player.x, closestZombie.y - player.y);
+                
+                for(let i = 1; i < zombies.length; i++) {
+                    let d = Math.hypot(zombies[i].x - player.x, zombies[i].y - player.y);
+                    if(d < minDist) {
+                        minDist = d;
+                        closestZombie = zombies[i];
+                    }
+                }
+                // Override mouse aiming targeting system matrix vectors toward selected closest opponent
+                mouse.x = closestZombie.x;
+                mouse.y = closestZombie.y;
+                shoot();
             }
 
             if (keys['w'] || keys['arrowup']) player.y -= player.speed;
@@ -398,7 +549,8 @@
                 z.angle = Math.atan2(dy, dx);
 
                 if (dist < player.size + z.size) {
-                    if (time - lastHitTime > hitCooldown) {
+                    // Hack: Skip health reduction calculations if invisibility is active
+                    if (!hackInvisibilityActive && (time - lastHitTime > hitCooldown)) {
                         player.hp -= 20;
                         lastHitTime = time;
                         let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
@@ -438,7 +590,10 @@
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.angle);
-            ctx.fillStyle = "#3388ff";
+            
+            // Hack Visual: Draw player semi-transparent if invisibility mode is enabled
+            ctx.fillStyle = hackInvisibilityActive ? "rgba(51, 136, 255, 0.4)" : "#3388ff";
+            
             ctx.beginPath();
             ctx.arc(0, 0, player.size, 0, Math.PI * 2);
             ctx.fill();
@@ -522,6 +677,13 @@
             gameoverEl.style.display = "none";
             waveBanner.style.opacity = "0";
             shopUiEl.classList.remove("active");
+            
+            // Keep hacks turned off on fresh restarts unless checked
+            document.getElementById("cheat-triggerbot").checked = false;
+            document.getElementById("cheat-invisible").checked = false;
+            hackTriggerbotActive = false;
+            hackInvisibilityActive = false;
+            closeCheatMenu();
         }
 
         requestAnimationFrame(loop);
