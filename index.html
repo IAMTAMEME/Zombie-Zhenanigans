@@ -1,726 +1,623 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Zhenanigans</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: #111;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #ui {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-align: center;
-            width: 800px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 10px;
-        }
-        .hp-label {
-            margin-right: 12px;
-            letter-spacing: 1px;
-        }
-        #health-container {
-            width: 200px;
-            height: 20px;
-            background-color: #444;
-            border: 2px solid #555;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        #health-bar {
-            width: 100%;
-            height: 100%;
-            background-color: #00ff66;
-            transition: width 0.1s ease;
-        }
-        #game-container {
-            position: relative;
-            width: 800px;
-            height: 600px;
-        }
-        canvas {
-            background-color: #1a1a1a;
-            border: 4px solid #333;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            cursor: crosshair;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        #gameover {
-            display: none;
-            position: absolute;
-            width: 100%;
-            top: 40%;
-            font-size: 48px;
-            color: #ff3333;
-            font-weight: bold;
-            text-shadow: 2px 2px #000;
-            text-align: center;
-            line-height: 1.6;
-            z-index: 10;
-        }
-        #restart {
-            margin-top: 25px;
-            padding: 12px 24px;
-            font-size: 18px;
-            background: #ff3333;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            letter-spacing: 1px;
-        }
-        #wave-banner {
-            position: absolute;
-            width: 100%;
-            top: 45%;
-            font-size: 64px;
-            color: #ffcc00;
-            font-weight: bold;
-            text-shadow: 3px 3px #000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            letter-spacing: 4px;
-            text-align: center;
-            z-index: 5;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zombie Zhenanigans</title>
 
-        /* Gun Shop UI Window Layout Styles */
-        #shop-ui {
-            display: none;
-            position: absolute;
-            top: -500px;
-            left: 100px;
-            width: 600px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 4px solid #ffcc00;
-            border-radius: 10px;
-            box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
-            padding: 25px;
-            box-sizing: border-box;
-            text-align: center;
-            z-index: 20;
-            transition: top 0.4s ease-out;
-        }
-        #shop-ui.active {
-            display: block;
-            top: 60px;
-        }
-        #shop-title {
-            font-size: 28px;
-            color: #ffcc00;
-            margin-bottom: 25px;
-            letter-spacing: 2px;
-            font-weight: bold;
-        }
-        
-        /* Large, Informative Weapon Buttons (No outside text elements) */
-        .shop-btn {
-            width: 100%;
-            margin: 12px 0;
-            padding: 15px;
-            background: #00ff66;
-            color: #111;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: Arial, sans-serif;
-            transition: background 0.2s, transform 0.1s;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .shop-btn:hover {
-            background: #00cc52;
-            transform: translateY(-1px);
-        }
-        .shop-btn:active {
-            transform: translateY(1px);
-        }
-        .shop-btn:disabled {
-            background: #444;
-            color: #777;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        /* Direct Text Hierarchy Structuring Inside Buttons */
-        .btn-title {
-            font-size: 18px;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .btn-desc {
-            font-size: 13px;
-            opacity: 0.85;
-            display: block;
-        }
+<style>
+body {
+    margin: 0;
+    background-color: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+}
 
-        /* Large Skip Button Styling */
-        #skip-shop-btn {
-            width: 100%;
-            margin-top: 20px;
-            padding: 15px;
-            background: #ff3333;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            transition: background 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        #skip-shop-btn:hover {
-            background: #cc2424;
-        }
+#ui {
+    width: 800px;
+    display: flex;
+    justify-content: space-between;
+    margin: 15px;
+    font-size: 22px;
+    font-weight: bold;
+}
 
-        #hack-trigger-btn {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            background: rgba(30, 30, 30, 0.7);
-            color: #555;
-            border: 1px solid #333;
-            padding: 4px 8px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 3px;
-            font-size: 12px;
-            z-index: 25;
-            transition: all 0.2s;
-        }
-        #hack-trigger-btn:hover {
-            background: #ff0055;
-            color: #fff;
-            border-color: #fff;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
-        }
-        #cheat-menu {
-            display: none;
-            position: absolute;
-            top: 50px;
-            left: 250px;
-            width: 300px;
-            background: rgba(35, 15, 15, 0.95);
-            border: 3px dashed #ff0055;
-            border-radius: 8px;
-            padding: 15px;
-            box-sizing: border-box;
-            z-index: 30;
-            box-shadow: 0 0 25px rgba(255, 0, 85, 0.5);
-        }
-        .cheat-title {
-            font-size: 20px;
-            color: #ff0055;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-        .cheat-item {
-            margin: 12px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-        }
-        .cheat-input {
-            width: 60px;
-            background: #222;
-            border: 1px solid #ff0055;
-            color: #fff;
-            padding: 4px;
-            text-align: center;
-            border-radius: 3px;
-        }
-        .cheat-btn {
-            background: #ff0055;
-            color: #fff;
-            border: none;
-            padding: 4px 10px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 3px;
-        }
-        .cheat-btn:hover {
-            background: #cc0044;
-        }
-        .cheat-close-btn {
-            width: 100%;
-            margin-top: 10px;
-            background: #444;
-            color: #fff;
-            border: none;
-            padding: 6px;
-            cursor: pointer;
-            border-radius: 3px;
-        }
-    </style>
+#game-container {
+    position: relative;
+}
+
+canvas {
+    background: #1a1a1a;
+    border: 4px solid #333;
+}
+
+#health-container {
+    width: 200px;
+    height: 20px;
+    background: #444;
+    border: 2px solid #666;
+}
+
+#health-bar {
+    width: 100%;
+    height: 100%;
+    background: #00ff66;
+}
+
+#gameover {
+    display: none;
+    position: absolute;
+    top: 40%;
+    width: 100%;
+    text-align: center;
+    font-size: 48px;
+    color: red;
+    font-weight: bold;
+}
+
+#restart {
+    padding: 10px 20px;
+    font-size: 18px;
+}
+
+#hack-trigger-btn {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: #222;
+    color: #777;
+    border: 1px solid #444;
+    cursor: pointer;
+}
+
+#cheat-menu {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 240px;
+    width: 320px;
+    background: rgba(20,20,20,0.95);
+    border: 3px solid #ff0055;
+    padding: 15px;
+    z-index: 10;
+}
+
+.cheat-item {
+    margin: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cheat-btn {
+    background: #ff0055;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.cheat-input {
+    width: 60px;
+}
+
+.cheat-close-btn {
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+}
+</style>
 </head>
+
 <body>
-    <div id="ui">
-        <div>ZOMBIE ZHENGANINZANS</div>
-        <div style="display: flex; align-items: center;">
-            <span class="hp-label">HP:</span>
-            <div id="health-container"><div id="health-bar"></div></div>
-        </div>
-        <div>Wave: <span id="wave">0</span></div>
-        <div>Food-cans: 🥫 <span id="foodCans">0</span></div>
-    </div>
 
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <button id="hack-trigger-btn" onclick="tryOpenHacks()">????</button>
+<div id="ui">
+    <div>Wave: <span id="wave">0</span></div>
 
-        <div id="wave-banner">WAVE 1</div>
-        <div id="gameover">
-            GAME OVER <br>
-            <button id="restart" onclick="resetGame()">Try Again</button>
-        </div>
-
-        <!-- Gun Shop Window Overlay -->
-        <div id="shop-ui">
-            <div id="shop-title">🛒 GUN SHOP</div>
-            
-            <!-- Weapon Upgrades containing internal label lines -->
-            <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)">
-                <span class="btn-title">Speed Loader (🥫 15 Cans)</span>
-                <span class="btn-desc">Reduces your fire cooldown rate permanently.</span>
-            </button>
-            
-            <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)">
-                <span class="btn-title">Heavy Caliber Projectiles (🥫 20 Cans)</span>
-                <span class="btn-desc">Increases weapon bullet sizing scales significantly.</span>
-            </button>
-            
-            <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)">
-                <span class="btn-title">Lightweight Combat Boots (🥫 25 Cans)</span>
-                <span class="btn-desc">Increases player running movement velocity.</span>
-            </button>
-
-            <!-- Working Skip Button -->
-            <button id="skip-shop-btn" onclick="closeShop()">
-                SKIP SHOP & START NEXT WAVE
-            </button>
-        </div>
-
-        <!-- Cheat Menu UI Window -->
-        <div id="cheat-menu">
-            <div class="cheat-title">💀 MOD MENU MATRIX</div>
-            <div class="cheat-item">
-                <label>Set Target Wave:</label>
-                <div>
-                    <input type="number" id="cheat-wave-num" class="cheat-input" value="1">
-                    <button class="cheat-btn" onclick="cheatSetWave()">Set</button>
-                </div>
-            </div>
-            <div class="cheat-item">
-                <label>Trigger Bot Auto-Fire:</label>
-                <input type="checkbox" id="cheat-triggerbot" onchange="toggleTriggerbot(this.checked)">
-            </div>
-            <div class="cheat-item">
-                <label>Invisibility / Godmode:</label>
-                <input type="checkbox" id="cheat-invisible" onchange="toggleInvisibility(this.checked)">
-            </div>
-            <div class="cheat-item">
-                <label>Add 100 Cans Cash:</label>
-                <button class="cheat-btn" onclick="cheatGiveCans()">+100</button>
-            </div>
-            <button class="cheat-close-btn" onclick="closeCheatMenu()">Close Matrix</button>
+    <div style="display:flex;align-items:center;">
+        HP:
+        <div id="health-container">
+            <div id="health-bar"></div>
         </div>
     </div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const foodCansEl = document.getElementById("foodCans");
-        const waveEl = document.getElementById("wave");
-        const healthBarEl = document.getElementById("health-bar");
-        const gameoverEl = document.getElementById("gameover");
-        const waveBanner = document.getElementById("wave-banner");
-        const shopUiEl = document.getElementById("shop-ui");
-        const cheatMenuEl = document.getElementById("cheat-menu");
+    <div>🥫 <span id="foodCans">0</span></div>
+</div>
 
-        // Game State
-        let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
-        let bullets = [];
-        let zombies = [];
-        let keys = {};
-        let mouse = { x: 0, y: 0 };
-        let foodCans = 0;
-        let gameOver = false;
-        let shootCooldown = 500;
-        let bulletSize = 4;
-        let lastShootTime = 0;
-        let currentWave = 0;
-        let waveState = "READY_TO_START";
-        let lastHitTime = 0;
-        const hitCooldown = 400;
-        let isShopOpen = false;
+<div id="game-container">
 
-        // Hack Toggles
-        let hackTriggerbotActive = false;
-        let hackInvisibilityActive = false;
+<canvas id="gameCanvas" width="800" height="600"></canvas>
 
-        window.addEventListener("keydown", (e) => { if(!isShopOpen) keys[e.key.toLowerCase()] = true; });
-        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+<button id="hack-trigger-btn" onclick="tryOpenHacks()">????</button>
 
-        canvas.addEventListener("mousemove", (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
+<div id="gameover">
+    GAME OVER
+    <br><br>
+    <button id="restart" onclick="resetGame()">Restart</button>
+</div>
+
+<div id="cheat-menu">
+
+    <h2 style="text-align:center;color:#ff0055;">
+        MOD MENU
+    </h2>
+
+    <div class="cheat-item">
+        <label>Wave:</label>
+        <div>
+            <input type="number" id="cheat-wave-num" class="cheat-input" value="1">
+            <button class="cheat-btn" onclick="cheatSetWave()">Set</button>
+        </div>
+    </div>
+
+    <div class="cheat-item">
+        <label>Triggerbot:</label>
+        <input type="checkbox" onchange="toggleTriggerbot(this.checked)">
+    </div>
+
+    <div class="cheat-item">
+        <label>Godmode:</label>
+        <input type="checkbox" onchange="toggleInvisibility(this.checked)">
+    </div>
+
+    <div class="cheat-item">
+        <label>Add 100 Cans:</label>
+        <button class="cheat-btn" onclick="cheatGiveCans()">+100</button>
+    </div>
+
+    <div class="cheat-item">
+        <label>Speed:</label>
+        <input type="range" min="1" max="20" value="4"
+        oninput="setPlayerSpeed(this.value)">
+    </div>
+
+    <div class="cheat-item">
+        <label>No Cooldown:</label>
+        <input type="checkbox"
+        onchange="toggleNoCooldown(this.checked)">
+    </div>
+
+    <div class="cheat-item">
+        <label>Health:</label>
+        <input type="range" min="1" max="1000" value="100"
+        oninput="setPlayerHealth(this.value)">
+    </div>
+
+    <div class="cheat-item">
+        <label>Damage:</label>
+        <input type="range" min="1" max="100" value="1"
+        oninput="setBulletDamage(this.value)">
+    </div>
+
+    <button class="cheat-close-btn" onclick="closeCheatMenu()">
+        Close
+    </button>
+
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const foodCansEl = document.getElementById("foodCans");
+const waveEl = document.getElementById("wave");
+const healthBarEl = document.getElementById("health-bar");
+const gameoverEl = document.getElementById("gameover");
+const cheatMenuEl = document.getElementById("cheat-menu");
+
+let player = {
+    x: 400,
+    y: 300,
+    size: 20,
+    speed: 4,
+    angle: 0,
+    maxHp: 100,
+    hp: 100
+};
+
+let bullets = [];
+let zombies = [];
+
+let keys = {};
+
+let mouse = {
+    x: 0,
+    y: 0
+};
+
+let foodCans = 0;
+let currentWave = 0;
+let gameOver = false;
+
+let shootCooldown = 500;
+let lastShootTime = 0;
+
+let bulletSize = 4;
+
+let noCooldownActive = false;
+let bulletDamage = 1;
+
+let hackTriggerbotActive = false;
+let hackInvisibilityActive = false;
+
+window.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+});
+
+window.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+canvas.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+});
+
+canvas.addEventListener("mousedown", () => {
+    if(!gameOver) shoot();
+});
+
+function shoot() {
+
+    const currentTime = performance.now();
+
+    if (
+        noCooldownActive ||
+        currentTime - lastShootTime >= shootCooldown
+    ) {
+
+        let dx = mouse.x - player.x;
+        let dy = mouse.y - player.y;
+
+        let angle = Math.atan2(dy, dx);
+
+        bullets.push({
+            x: player.x,
+            y: player.y,
+            vx: Math.cos(angle) * 8,
+            vy: Math.sin(angle) * 8,
+            size: bulletSize,
+            damage: bulletDamage
         });
 
-        canvas.addEventListener("mousedown", () => {
-            if (!gameOver && !isShopOpen) shoot();
-        });
+        lastShootTime = currentTime;
+    }
+}
 
-        function shoot() {
-            const currentTime = performance.now();
-            if (currentTime - lastShootTime >= shootCooldown) {
-                let dx = mouse.x - player.x;
-                let dy = mouse.y - player.y;
-                let angle = Math.atan2(dy, dx);
-                bullets.push({
-                    x: player.x,
-                    y: player.y,
-                    vx: Math.cos(angle) * 8,
-                    vy: Math.sin(angle) * 8,
-                    size: bulletSize
-                });
-                lastShootTime = currentTime;
-            }
-        }
+function spawnZombie() {
 
-        function startNextWave() {
-            waveState = "SPAWNING";
-            currentWave++;
-            waveEl.innerText = currentWave;
-            waveBanner.innerText = `WAVE ${currentWave}`;
-            waveBanner.style.opacity = "1";
-            
-            setTimeout(() => {
-                if (gameOver) return;
-                waveBanner.style.opacity = "0";
-                let zombieCount = currentWave * 3;
-                for (let i = 0; i < zombieCount; i++) {
-                    spawnZombie();
-                }
-                waveState = "FIGHTING";
-            }, 2000);
-        }
+    let x, y;
 
-        function spawnZombie() {
-            let x, y;
-            if (Math.random() < 0.5) {
-                x = Math.random() < 0.5 ? -30 : canvas.width + 30;
-                y = Math.random() * canvas.height;
-            } else {
-                x = Math.random() * canvas.width;
-                y = Math.random() < 0.5 ? -30 : canvas.height + 30;
-            }
+    if(Math.random() < 0.5) {
+        x = Math.random() < 0.5 ? -30 : canvas.width + 30;
+        y = Math.random() * canvas.height;
+    } else {
+        x = Math.random() * canvas.width;
+        y = Math.random() < 0.5 ? -30 : canvas.height + 30;
+    }
 
-            zombies.push({
-                x: x,
-                y: y,
-                size: 16,
-                speed: 1.5,
-                angle: 0
-            });
-        }
+    zombies.push({
+        x,
+        y,
+        size: 16,
+        speed: 1.5,
+        angle: 0,
+        hp: 3 + currentWave
+    });
+}
 
-        function openShop() {
-            isShopOpen = true;
-            keys = {}; // Clear stuck key events
-            
-            // Manage button lockouts directly
-            document.getElementById("btn-loader").disabled = foodCans < 15;
-            document.getElementById("btn-caliber").disabled = foodCans < 20;
-            document.getElementById("btn-boots").disabled = foodCans < 25;
+function startWave() {
 
-            shopUiEl.classList.add("active");
-        }
+    currentWave++;
 
-        function buyItem(item, cost) {
-            if (foodCans >= cost) {
-                foodCans -= cost;
-                foodCansEl.innerText = foodCans;
-                if (item === 'loader') shootCooldown = Math.max(150, shootCooldown - 75);
-                else if (item === 'caliber') bulletSize += 3;
-                else if (item === 'boots') player.speed += 0.8;
-                closeShop();
-            }
-        }
+    waveEl.innerText = currentWave;
 
-        function closeShop() {
-            shopUiEl.classList.remove("active");
-            isShopOpen = false;
-            waveState = "READY_TO_START"; // Advances the loop safely
-        }
+    for(let i = 0; i < currentWave * 3; i++) {
+        spawnZombie();
+    }
+}
 
-        /* Cheat Mechanics */
-        function tryOpenHacks() {
-            let pass = prompt("Enter Secret Code:");
-            if (pass === "0000") {
-                cheatMenuEl.style.display = "block";
-            } else {
-                alert("ACCESS DENIED");
-            }
-        }
+function tryOpenHacks() {
 
-        function closeCheatMenu() {
-            cheatMenuEl.style.display = "none";
-        }
+    let pass = prompt("Enter Secret Code:");
 
-        function cheatSetWave() {
-            let val = parseInt(document.getElementById("cheat-wave-num").value);
-            if (!isNaN(val) && val >= 0) {
-                currentWave = val - 1;
-                zombies = [];
-                bullets = [];
-                isShopOpen = false;
-                shopUiEl.classList.remove("active");
-                waveState = "READY_TO_START";
-            }
-        }
+    if(pass === "0000") {
+        cheatMenuEl.style.display = "block";
+    } else {
+        alert("ACCESS DENIED");
+    }
+}
 
-        function toggleTriggerbot(checked) {
-            hackTriggerbotActive = checked;
-        }
+function closeCheatMenu() {
+    cheatMenuEl.style.display = "none";
+}
 
-        function toggleInvisibility(checked) {
-            hackInvisibilityActive = checked;
-        }
+function cheatSetWave() {
 
-        function cheatGiveCans() {
-            foodCans += 100;
-            foodCansEl.innerText = foodCans;
-            if(isShopOpen) {
-                document.getElementById("btn-loader").disabled = foodCans < 15;
-                document.getElementById("btn-caliber").disabled = foodCans < 20;
-                document.getElementById("btn-boots").disabled = foodCans < 25;
-            }
-        }
+    let val = parseInt(
+        document.getElementById("cheat-wave-num").value
+    );
 
-        function update(time) {
-            if (gameOver) return;
+    if(!isNaN(val) && val > 0) {
 
-            if (!isShopOpen) {
-                if (keys['w'] || keys['arrowup']) player.y -= player.speed;
-                if (keys['s'] || keys['arrowdown']) player.y += player.speed;
-                if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
-                if (keys['d'] || keys['arrowright']) player.x += player.speed;
+        currentWave = val - 1;
 
-                player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-                player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-            }
+        zombies = [];
 
-            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+        startWave();
+    }
+}
 
-            if (isShopOpen) return; 
+function toggleTriggerbot(v) {
+    hackTriggerbotActive = v;
+}
 
-            if (zombies.length === 0 && waveState === "READY_TO_START") {
-                if (currentWave > 0 && currentWave % 10 === 0) {
-                    waveState = "SHOPPING";
-                    openShop();
-                    return;
-                }
-                startNextWave();
-            }
+function toggleInvisibility(v) {
+    hackInvisibilityActive = v;
+}
 
-            if (hackTriggerbotActive && zombies.length > 0) {
-                let closestZombie = zombies;
-                let minDist = Math.hypot(closestZombie.x - player.x, closestZombie.y - player.y);
-                
-                for(let i = 1; i < zombies.length; i++) {
-                    let d = Math.hypot(zombies[i].x - player.x, zombies[i].y - player.y);
-                    if(d < minDist) {
-                        minDist = d;
-                        closestZombie = zombies[i];
-                    }
-                }
-                mouse.x = closestZombie.x;
-                mouse.y = closestZombie.y;
-                shoot();
-            }
+function cheatGiveCans() {
 
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                let b = bullets[i];
-                b.x += b.vx;
-                b.y += b.vy;
-                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-                    bullets.splice(i, 1);
-                }
-            }
+    foodCans += 100;
 
-            for (let i = zombies.length - 1; i >= 0; i--) {
-                let z = zombies[i];
-                let dx = player.x - z.x;
-                let dy = player.y - z.y;
-                let dist = Math.hypot(dx, dy);
+    foodCansEl.innerText = foodCans;
+}
 
-                z.x += (dx / dist) * z.speed;
-                z.y += (dy / dist) * z.speed;
-                z.angle = Math.atan2(dy, dx);
+function setPlayerSpeed(v) {
+    player.speed = parseFloat(v);
+}
 
-                if (dist < player.size + z.size) {
-                    if (!hackInvisibilityActive && (time - lastHitTime > hitCooldown)) {
-                        player.hp -= 20;
-                        lastHitTime = time;
-                        let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
-                        healthBarEl.style.width = hpPercent + "%";
-                        
-                        if (hpPercent < 30) healthBarEl.style.backgroundColor = "#ff3333";
-                        else if (hpPercent < 60) healthBarEl.style.backgroundColor = "#ff9900";
+function toggleNoCooldown(v) {
+    noCooldownActive = v;
+}
 
-                        if (player.hp <= 0) {
-                            gameOver = true;
-                            gameoverEl.style.display = "block";
-                        }
-                    }
-                }
+function setPlayerHealth(v) {
 
-                for (let j = bullets.length - 1; j >= 0; j--) {
-                    let b = bullets[j];
-                    let bDist = Math.hypot(b.x - z.x, b.y - z.y);
-                    if (bDist < z.size + b.size) {
-                        zombies.splice(i, 1);
-                        bullets.splice(j, 1);
-                        foodCans += 1;
-                        foodCansEl.innerText = foodCans;
-                        break;
-                    }
+    player.maxHp = parseInt(v);
+    player.hp = parseInt(v);
+
+    updateHealthBar();
+}
+
+function setBulletDamage(v) {
+    bulletDamage = parseInt(v);
+}
+
+function updateHealthBar() {
+
+    let hpPercent =
+        (player.hp / player.maxHp) * 100;
+
+    healthBarEl.style.width =
+        hpPercent + "%";
+}
+
+function update() {
+
+    if(gameOver) return;
+
+    if(keys["w"]) player.y -= player.speed;
+    if(keys["s"]) player.y += player.speed;
+    if(keys["a"]) player.x -= player.speed;
+    if(keys["d"]) player.x += player.speed;
+
+    player.x = Math.max(
+        player.size,
+        Math.min(canvas.width - player.size, player.x)
+    );
+
+    player.y = Math.max(
+        player.size,
+        Math.min(canvas.height - player.size, player.y)
+    );
+
+    player.angle =
+        Math.atan2(
+            mouse.y - player.y,
+            mouse.x - player.x
+        );
+
+    if(zombies.length === 0) {
+        startWave();
+    }
+
+    if(hackTriggerbotActive && zombies.length > 0) {
+
+        let z = zombies[0];
+
+        mouse.x = z.x;
+        mouse.y = z.y;
+
+        shoot();
+    }
+
+    bullets.forEach(b => {
+
+        b.x += b.vx;
+        b.y += b.vy;
+    });
+
+    for(let i = zombies.length - 1; i >= 0; i--) {
+
+        let z = zombies[i];
+
+        let dx = player.x - z.x;
+        let dy = player.y - z.y;
+
+        let dist = Math.hypot(dx, dy);
+
+        z.x += (dx / dist) * z.speed;
+        z.y += (dy / dist) * z.speed;
+
+        if(dist < player.size + z.size) {
+
+            if(!hackInvisibilityActive) {
+
+                player.hp -= 1;
+
+                updateHealthBar();
+
+                if(player.hp <= 0) {
+
+                    gameOver = true;
+
+                    gameoverEl.style.display = "block";
                 }
             }
+        }
 
-            if (zombies.length === 0 && waveState === "FIGHTING") {
-                waveState = "READY_TO_START";
+        for(let j = bullets.length - 1; j >= 0; j--) {
+
+            let b = bullets[j];
+
+            let d =
+                Math.hypot(
+                    b.x - z.x,
+                    b.y - z.y
+                );
+
+            if(d < z.size + b.size) {
+
+                z.hp -= b.damage;
+
+                bullets.splice(j, 1);
+
+                if(z.hp <= 0) {
+
+                    zombies.splice(i, 1);
+
+                    foodCans++;
+
+                    foodCansEl.innerText = foodCans;
+                }
+
+                break;
             }
         }
+    }
+}
 
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+function render() {
 
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-            
-            ctx.fillStyle = hackInvisibilityActive ? "rgba(51, 136, 255, 0.4)" : "#3388ff";
-            
-            ctx.beginPath();
-            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "#555";
-            ctx.fillRect(0, -4, 25, 8);
-            ctx.restore();
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
-            if (isShopOpen) return; 
+    ctx.save();
 
-            ctx.fillStyle = "#ffcc00";
-            bullets.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
+    ctx.translate(player.x, player.y);
 
-            zombies.forEach(z => {
-                ctx.save();
-                ctx.translate(z.x, z.y);
-                ctx.rotate(z.angle);
-                ctx.imageSmoothingEnabled = false;
-                
-                const s = z.size;
-                const p = (s * 2) / 8;
+    ctx.rotate(player.angle);
 
-                ctx.fillStyle = "#356e31";
-                ctx.fillRect(-s, -s, s * 2, s * 2);
+    ctx.fillStyle =
+        hackInvisibilityActive
+        ? "rgba(50,150,255,0.4)"
+        : "#3388ff";
 
-                ctx.fillStyle = "#1e421b";
-                ctx.fillRect(-s, -s, s * 2, p);
-                ctx.fillRect(-s, s - p, s * 2, p);
-                ctx.fillRect(-s, -s, p, s * 2);
-                ctx.fillRect(s - p, -s, p, s * 2);
+    ctx.beginPath();
 
-                ctx.fillStyle = "#ff2222";
-                ctx.fillRect(s - p * 3, -s + p * 2, p, p);
-                ctx.fillRect(s - p * 3, s - p * 3, p, p);
+    ctx.arc(0,0,player.size,0,Math.PI*2);
 
-                ctx.fillStyle = "#0f170e";
-                ctx.fillRect(s - p * 2, -s + p * 3, p, p * 2);
+    ctx.fill();
 
-                ctx.fillStyle = "#7a1a1a";
-                ctx.fillRect(-s + p * 2, -s + p * 2, p * 3, p);
-                ctx.fillRect(-s + p * 2, -s + p * 1, p, p * 3);
-                ctx.fillRect(-s + p * 4, -s + p * 1, p, p * 3);
-                
-                ctx.restore();
-            });
+    ctx.fillStyle = "#555";
 
-            const timeSinceLastShot = performance.now() - lastShootTime;
-            if (timeSinceLastShot < shootCooldown) {
-                const progress = timeSinceLastShot / shootCooldown;
-                ctx.beginPath();
-                ctx.arc(mouse.x, mouse.y, 12, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
-                ctx.strokeStyle = "rgba(255, 204, 0, 0.7)";
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-        }
+    ctx.fillRect(0,-4,25,8);
 
-        function loop(time) {
-            update(time);
-            render();
-            requestAnimationFrame(loop);
-        }
+    ctx.restore();
 
-        function resetGame() {
-            player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
-            bullets = [];
-            zombies = [];
-            foodCans = 0;
-            currentWave = 0;
-            lastShootTime = 0;
-            shootCooldown = 500;
-            bulletSize = 4;
-            gameOver = false;
-            isShopOpen = false;
-            waveState = "READY_TO_START";
-            foodCansEl.innerText = foodCans;
-            waveEl.innerText = 0;
-            healthBarEl.style.width = "100%";
-            healthBarEl.style.backgroundColor = "#00ff66";
-            gameoverEl.style.display = "none";
-            waveBanner.style.opacity = "0";
-            shopUiEl.classList.remove("active");
-            
-            document.getElementById("cheat-triggerbot").checked = false;
-            document.getElementById("cheat-invisible").checked = false;
-            hackTriggerbotActive = false;
-            hackInvisibilityActive = false;
-            closeCheatMenu();
-        }
+    ctx.fillStyle = "#ffcc00";
 
-        requestAnimationFrame(loop);
-    </script>
+    bullets.forEach(b => {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            b.x,
+            b.y,
+            b.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+    });
+
+    zombies.forEach(z => {
+
+        ctx.fillStyle = "green";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            z.x,
+            z.y,
+            z.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+    });
+}
+
+function loop() {
+
+    update();
+
+    render();
+
+    requestAnimationFrame(loop);
+}
+
+function resetGame() {
+
+    player.hp = 100;
+    player.maxHp = 100;
+    player.speed = 4;
+
+    bullets = [];
+    zombies = [];
+
+    foodCans = 0;
+    currentWave = 0;
+
+    gameOver = false;
+
+    shootCooldown = 500;
+
+    bulletDamage = 1;
+
+    noCooldownActive = false;
+
+    hackTriggerbotActive = false;
+    hackInvisibilityActive = false;
+
+    foodCansEl.innerText = 0;
+    waveEl.innerText = 0;
+
+    updateHealthBar();
+
+    gameoverEl.style.display = "none";
+
+    closeCheatMenu();
+}
+
+requestAnimationFrame(loop);
+
+</script>
+
 </body>
 </html>
