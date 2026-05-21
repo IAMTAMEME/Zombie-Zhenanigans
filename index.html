@@ -227,7 +227,7 @@
         function closeShop() {
             shopUiEl.classList.remove("active");
             isShopOpen = false;
-            waveState = "READY_TO_START";
+            startNextWave();
         }
 
         function tryOpenHacks() {
@@ -238,7 +238,7 @@
         function closeCheatMenu() { cheatMenuEl.style.display = "none"; }
         function cheatSetWave() {
             let val = parseInt(document.getElementById("cheat-wave-num").value);
-            if (!isNaN(val) && val >= 0) {
+            if (!isNaN(val) && val >=  0) {
                 currentWave = val - 1;
                 zombies = []; bullets = []; isShopOpen = false;
                 shopUiEl.classList.remove("active");
