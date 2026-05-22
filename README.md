@@ -1,12 +1,12 @@
 # Zombie Zhenanigans
 Credits:
 
-Head coder: IAMTAMEME
+Head c0der: IAMTAMEME
 
-Animator: AL-Ca(Apon)
+Animat0r: AL-Ca(Apon)
 
-Sprite Creator: Eterx-Code
+Sprite Creat00r: Eterx-Code
 
-Co-Sprite Creator: Edit_Name
+Co-Sprite Creat0r: Edit_Name
 
 Co-CO-Sprite Creator: Delxxrodelu
