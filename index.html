@@ -6,10 +6,11 @@
     <title>Zombie Zhenanigans</title>
     <style>
         body { margin: 0; background-color: #111; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #ui { margin-bottom: 20px; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-align: center; width: 800px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        #ui { margin-bottom: 20px; font-size: 22px; font-weight: bold; letter-spacing: 2px; text-align: center; width: 800px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
         .hp-label { margin-right: 12px; letter-spacing: 1px; }
         #health-container { width: 200px; height: 20px; background-color: #444; border: 2px solid #555; border-radius: 3px; overflow: hidden; }
         #health-bar { width: 100%; height: 100%; background-color: #00ff66; transition: width 0.1s ease; }
+        #weapon-display { font-size: 16px; color: #ffcc00; }
         #game-container { position: relative; width: 800px; height: 600px; }
         canvas { background-color: #1a1a1a; border: 4px solid #333; box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); cursor: crosshair; position: absolute; top: 0; left: 0; }
         #gameover { display: none; position: absolute; width: 100%; top: 40%; font-size: 48px; color: #ff3333; font-weight: bold; text-shadow: 2px 2px #000; text-align: center; line-height: 1.6; z-index: 10; }
@@ -49,7 +50,8 @@
             <div id="health-container"><div id="health-bar"></div></div>
         </div>
         <div>Wave: <span id="wave">0</span></div>
-        <div>Food-cans: 🥫 <span id="foodCans">0</span></div>
+        <div>🥫 <span id="foodCans">0</span></div>
+        <div id="weapon-display">Gun: Pistol [1]</div>
     </div>
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -61,22 +63,22 @@
         </div>
         <div id="shop-ui">
             <div id="shop-title">🛒 GUN SHOP</div>
-            <button class="shop-btn" id="btn-loader" onclick="buyItem('loader', 15)">
-                <span class="btn-title">Speed Loader (🥫 15 Cans)</span>
-                <span class="btn-desc">Reduces your fire cooldown rate permanently.</span>
+            <button class="shop-btn" id="btn-loader" onclick="buyItem('shotgun', 15)">
+                <span class="btn-title">Shotgun (🥫 15 Cans)</span>
+                <span class="btn-desc">3-bullet spread. MASSIVE damage up close, weak far away.</span>
             </button>
-            <button class="shop-btn" id="btn-caliber" onclick="buyItem('caliber', 20)">
-                <span class="btn-title">Heavy Caliber Projectiles (🥫 20 Cans)</span>
-                <span class="btn-desc">Increases weapon bullet sizing scales significantly.</span>
+            <button class="shop-btn" id="btn-caliber" onclick="buyItem('glizzy', 20)">
+                <span class="btn-title">Glizzy Launcher (🥫 20 Cans)</span>
+                <span class="btn-desc">Shoots hot dogs that slow (fatten) zombies on hit.</span>
             </button>
-            <button class="shop-btn" id="btn-boots" onclick="buyItem('boots', 25)">
-                <span class="btn-title">Lightweight Combat Boots (🥫 25 Cans)</span>
-                <span class="btn-desc">Increases player running movement velocity.</span>
+            <button class="shop-btn" id="btn-boots" onclick="buyItem('water', 25)">
+                <span class="btn-title">Water Gun (🥫 25 Cans)</span>
+                <span class="btn-desc">Phews blue water bullets. Same damage, wetter.</span>
             </button>
             <button id="skip-shop-btn" onclick="closeShop()">SKIP SHOP & START NEXT WAVE</button>
         </div>
         <div id="cheat-menu">
-            <div class="cheat-title">💀 MOD MENU MATRIX</div>
+            <div class="cheat-title">💀 DEV TOOLS</div>
             <div class="cheat-item">
                 <label>Set Target Wave:</label>
                 <div>
@@ -93,24 +95,15 @@
                 <input type="checkbox" id="cheat-invisible" onchange="toggleInvisibility(this.checked)">
             </div>
             <div class="cheat-slider-item">
-                <div class="cheat-slider-row">
-                    <label>Speed:</label>
-                    <span class="cheat-slider-val" id="cheat-speed-val">4</span>
-                </div>
+                <div class="cheat-slider-row"><label>Speed:</label><span class="cheat-slider-val" id="cheat-speed-val">4</span></div>
                 <input type="range" min="1" max="20" step="0.5" value="4" class="cheat-slider" id="cheat-speed" oninput="cheatSetSpeed(this.value)">
             </div>
             <div class="cheat-slider-item">
-                <div class="cheat-slider-row">
-                    <label>Damage (bullet size):</label>
-                    <span class="cheat-slider-val" id="cheat-damage-val">4</span>
-                </div>
+                <div class="cheat-slider-row"><label>Damage (bullet size):</label><span class="cheat-slider-val" id="cheat-damage-val">4</span></div>
                 <input type="range" min="2" max="40" step="1" value="4" class="cheat-slider" id="cheat-damage" oninput="cheatSetDamage(this.value)">
             </div>
             <div class="cheat-slider-item">
-                <div class="cheat-slider-row">
-                    <label>Health:</label>
-                    <span class="cheat-slider-val" id="cheat-health-val">100</span>
-                </div>
+                <div class="cheat-slider-row"><label>Health:</label><span class="cheat-slider-val" id="cheat-health-val">100</span></div>
                 <input type="range" min="10" max="1000" step="10" value="100" class="cheat-slider" id="cheat-health" oninput="cheatSetHealth(this.value)">
             </div>
             <div class="cheat-item">
@@ -130,6 +123,7 @@
         const waveBanner = document.getElementById("wave-banner");
         const shopUiEl = document.getElementById("shop-ui");
         const cheatMenuEl = document.getElementById("cheat-menu");
+        const weaponDisplayEl = document.getElementById("weapon-display");
 
         let player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
         let bullets = [];
@@ -138,7 +132,6 @@
         let mouse = { x: 0, y: 0 };
         let foodCans = 0;
         let gameOver = false;
-        let shootCooldown = 500;
         let bulletSize = 4;
         let lastShootTime = 0;
         let currentWave = 0;
@@ -149,7 +142,41 @@
         let hackTriggerbotActive = false;
         let hackInvisibilityActive = false;
 
-        window.addEventListener("keydown", (e) => { if(!isShopOpen) keys[e.key.toLowerCase()] = true; });
+        const WEAPONS = {
+            pistol:  { name: "Pistol",          cooldown: 500, color: "#ffcc00" },
+            shotgun: { name: "Shotgun",         cooldown: 700, color: "#ff8800" },
+            glizzy:  { name: "Glizzy Launcher", cooldown: 550, color: "#d83030" },
+            water:   { name: "Water Gun",       cooldown: 450, color: "#33aaff" },
+        };
+        let ownedWeapons = { pistol: true, shotgun: false, glizzy: false, water: false };
+        let currentWeapon = "pistol";
+        let shootCooldown = WEAPONS.pistol.cooldown;
+
+        function updateWeaponDisplay() {
+            const slots = ["pistol","shotgun","glizzy","water"];
+            const parts = slots.map((w,i) => {
+                if (!ownedWeapons[w]) return null;
+                const tag = `${WEAPONS[w].name} [${i+1}]`;
+                return w === currentWeapon ? `▶ ${tag}` : tag;
+            }).filter(Boolean);
+            weaponDisplayEl.innerText = "Gun: " + parts.join("  |  ");
+        }
+
+        function switchWeapon(w) {
+            if (!ownedWeapons[w]) return;
+            currentWeapon = w;
+            shootCooldown = WEAPONS[w].cooldown;
+            updateWeaponDisplay();
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (isShopOpen) return;
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === "1") switchWeapon("pistol");
+            if (e.key === "2") switchWeapon("shotgun");
+            if (e.key === "3") switchWeapon("glizzy");
+            if (e.key === "4") switchWeapon("water");
+        });
         window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
         canvas.addEventListener("mousemove", (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -158,14 +185,50 @@
         });
         canvas.addEventListener("mousedown", () => { if (!gameOver && !isShopOpen) shoot(); });
 
+        function makeBullet(angle, opts) {
+            const speed = opts.speed || 8;
+            return {
+                x: player.x, y: player.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: opts.size || bulletSize,
+                damage: opts.damage || 1,
+                type: opts.type || "normal",
+                color: opts.color || "#ffcc00",
+                startX: player.x, startY: player.y,
+                maxRange: opts.maxRange || 9999,
+                falloff: opts.falloff || false,
+                slow: opts.slow || 0,
+                length: opts.length || 0,
+                angle: angle,
+            };
+        }
+
         function shoot() {
-            const currentTime = performance.now();
-            if (currentTime - lastShootTime >= shootCooldown) {
-                let dx = mouse.x - player.x;
-                let dy = mouse.y - player.y;
-                let angle = Math.atan2(dy, dx);
-                bullets.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 8, vy: Math.sin(angle) * 8, size: bulletSize });
-                lastShootTime = currentTime;
+            const now = performance.now();
+            if (now - lastShootTime < shootCooldown) return;
+            lastShootTime = now;
+            const baseAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+            if (currentWeapon === "pistol") {
+                bullets.push(makeBullet(baseAngle, { damage: 1, size: bulletSize, color: "#ffcc00" }));
+            } else if (currentWeapon === "shotgun") {
+                const spread = 0.22;
+                for (let i = -1; i <= 1; i++) {
+                    bullets.push(makeBullet(baseAngle + spread * i, {
+                        damage: 5, size: bulletSize + 1, color: "#ff8800",
+                        speed: 9, falloff: true, maxRange: 280,
+                    }));
+                }
+            } else if (currentWeapon === "glizzy") {
+                bullets.push(makeBullet(baseAngle, {
+                    damage: 2, size: bulletSize + 1, color: "#d83030",
+                    type: "glizzy", length: 18, slow: 0.5, speed: 7,
+                }));
+            } else if (currentWeapon === "water") {
+                bullets.push(makeBullet(baseAngle, {
+                    damage: 1, size: bulletSize, color: "#33aaff", type: "water", speed: 9,
+                }));
             }
         }
 
@@ -201,33 +264,33 @@
                 x = Math.random() * canvas.width;
                 y = Math.random() < 0.5 ? -30 : canvas.height + 30;
             }
-            zombies.push({ x, y, size: 16, speed: 1.5, angle: 0 });
+            const baseHp = 3 + Math.floor(currentWave / 3);
+            zombies.push({ x, y, size: 16, baseSpeed: 1.5, speed: 1.5, angle: 0, hp: baseHp, maxHp: baseHp, slowUntil: 0, fatness: 1 });
         }
 
         function openShop() {
             isShopOpen = true;
             keys = {};
-            document.getElementById("btn-loader").disabled = foodCans < 15;
-            document.getElementById("btn-caliber").disabled = foodCans < 20;
-            document.getElementById("btn-boots").disabled = foodCans < 25;
+            document.getElementById("btn-loader").disabled = foodCans < 15 || ownedWeapons.shotgun;
+            document.getElementById("btn-caliber").disabled = foodCans < 20 || ownedWeapons.glizzy;
+            document.getElementById("btn-boots").disabled = foodCans < 25 || ownedWeapons.water;
             shopUiEl.classList.add("active");
         }
 
         function buyItem(item, cost) {
-            if (foodCans >= cost) {
-                foodCans -= cost;
-                foodCansEl.innerText = foodCans;
-                if (item === 'loader') shootCooldown = Math.max(150, shootCooldown - 75);
-                else if (item === 'caliber') { bulletSize += 3; document.getElementById("cheat-damage").value = bulletSize; document.getElementById("cheat-damage-val").innerText = bulletSize; }
-                else if (item === 'boots') { player.speed += 0.8; document.getElementById("cheat-speed").value = player.speed; document.getElementById("cheat-speed-val").innerText = player.speed; }
-                closeShop();
-            }
+            if (foodCans < cost) return;
+            if (ownedWeapons[item]) return;
+            foodCans -= cost;
+            foodCansEl.innerText = foodCans;
+            ownedWeapons[item] = true;
+            switchWeapon(item);
+            closeShop();
         }
 
         function closeShop() {
             shopUiEl.classList.remove("active");
             isShopOpen = false;
-            waveState = "READY_TO_START";
+            startNextWave();
         }
 
         function tryOpenHacks() {
@@ -250,24 +313,13 @@
         function cheatGiveCans() {
             foodCans += 100;
             foodCansEl.innerText = foodCans;
-            if(isShopOpen) {
-                document.getElementById("btn-loader").disabled = foodCans < 15;
-                document.getElementById("btn-caliber").disabled = foodCans < 20;
-                document.getElementById("btn-boots").disabled = foodCans < 25;
-            }
+            if (isShopOpen) openShop();
         }
-        function cheatSetSpeed(v) {
-            player.speed = parseFloat(v);
-            document.getElementById("cheat-speed-val").innerText = v;
-        }
-        function cheatSetDamage(v) {
-            bulletSize = parseInt(v);
-            document.getElementById("cheat-damage-val").innerText = v;
-        }
+        function cheatSetSpeed(v) { player.speed = parseFloat(v); document.getElementById("cheat-speed-val").innerText = v; }
+        function cheatSetDamage(v) { bulletSize = parseInt(v); document.getElementById("cheat-damage-val").innerText = v; }
         function cheatSetHealth(v) {
             const nv = parseInt(v);
-            player.maxHp = nv;
-            player.hp = nv;
+            player.maxHp = nv; player.hp = nv;
             document.getElementById("cheat-health-val").innerText = v;
             updateHealthBar();
         }
@@ -284,39 +336,48 @@
             }
             player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
             if (isShopOpen) return;
+
             if (zombies.length === 0 && waveState === "READY_TO_START") {
                 if (currentWave > 0 && currentWave % 10 === 0) {
-                    waveState = "SHOPPING";
-                    openShop();
-                    return;
+                    waveState = "SHOPPING"; openShop(); return;
                 }
                 startNextWave();
             }
+
             if (hackTriggerbotActive && zombies.length > 0) {
-                let closestZombie = zombies[0];
-                let minDist = Math.hypot(closestZombie.x - player.x, closestZombie.y - player.y);
-                for(let i = 1; i < zombies.length; i++) {
+                let cz = zombies[0];
+                let md = Math.hypot(cz.x - player.x, cz.y - player.y);
+                for (let i = 1; i < zombies.length; i++) {
                     let d = Math.hypot(zombies[i].x - player.x, zombies[i].y - player.y);
-                    if(d < minDist) { minDist = d; closestZombie = zombies[i]; }
+                    if (d < md) { md = d; cz = zombies[i]; }
                 }
-                mouse.x = closestZombie.x;
-                mouse.y = closestZombie.y;
+                mouse.x = cz.x; mouse.y = cz.y;
                 shoot();
             }
+
             for (let i = bullets.length - 1; i >= 0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
-                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i, 1);
+                const traveled = Math.hypot(b.x - b.startX, b.y - b.startY);
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height || traveled > b.maxRange) {
+                    bullets.splice(i, 1);
+                }
             }
+
             for (let i = zombies.length - 1; i >= 0; i--) {
                 let z = zombies[i];
+                if (time < z.slowUntil) { z.speed = z.baseSpeed * 0.4; z.fatness = 1.5; }
+                else { z.speed = z.baseSpeed; z.fatness = 1; }
+
                 let dx = player.x - z.x;
                 let dy = player.y - z.y;
                 let dist = Math.hypot(dx, dy);
                 z.x += (dx / dist) * z.speed;
                 z.y += (dy / dist) * z.speed;
                 z.angle = Math.atan2(dy, dx);
-                if (dist < player.size + z.size) {
+                const hitRadius = z.size * z.fatness;
+
+                if (dist < player.size + hitRadius) {
                     if (!hackInvisibilityActive && (time - lastHitTime > hitCooldown)) {
                         player.hp -= 20;
                         lastHitTime = time;
@@ -324,15 +385,26 @@
                         if (player.hp <= 0) { gameOver = true; gameoverEl.style.display = "block"; }
                     }
                 }
+
                 for (let j = bullets.length - 1; j >= 0; j--) {
                     let b = bullets[j];
                     let bDist = Math.hypot(b.x - z.x, b.y - z.y);
-                    if (bDist < z.size + b.size) {
-                        zombies.splice(i, 1);
+                    if (bDist < hitRadius + b.size) {
+                        let dmg = b.damage;
+                        if (b.falloff) {
+                            const traveled = Math.hypot(b.x - b.startX, b.y - b.startY);
+                            const f = Math.max(0.15, 1 - (traveled / b.maxRange));
+                            dmg = Math.max(1, Math.round(dmg * f));
+                        }
+                        z.hp -= dmg;
+                        if (b.slow > 0) z.slowUntil = time + b.slow * 1000 + 1500;
                         bullets.splice(j, 1);
-                        foodCans += 1;
-                        foodCansEl.innerText = foodCans;
-                        break;
+                        if (z.hp <= 0) {
+                            zombies.splice(i, 1);
+                            foodCans += 1;
+                            foodCansEl.innerText = foodCans;
+                            break;
+                        }
                     }
                 }
             }
@@ -348,20 +420,49 @@
             ctx.beginPath();
             ctx.arc(0, 0, player.size, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = "#555";
+            ctx.fillStyle = WEAPONS[currentWeapon].color;
             ctx.fillRect(0, -4, 25, 8);
             ctx.restore();
+
             if (isShopOpen) return;
-            ctx.fillStyle = "#ffcc00";
-            bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill(); });
+
+            bullets.forEach(b => {
+                if (b.type === "glizzy") {
+                    ctx.save();
+                    ctx.translate(b.x, b.y);
+                    ctx.rotate(b.angle);
+                    ctx.fillStyle = "#d83030";
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, b.length, b.size, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = "#f0d090";
+                    ctx.fillRect(-b.length, -b.size * 0.4, b.length * 2, b.size * 0.3);
+                    ctx.restore();
+                } else if (b.type === "water") {
+                    ctx.fillStyle = "#33aaff";
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = "rgba(180,220,255,0.7)";
+                    ctx.beginPath();
+                    ctx.arc(b.x - b.size * 0.3, b.y - b.size * 0.3, b.size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = b.color;
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
             zombies.forEach(z => {
                 ctx.save();
                 ctx.translate(z.x, z.y);
                 ctx.rotate(z.angle);
                 ctx.imageSmoothingEnabled = false;
-                const s = z.size;
+                const s = z.size * z.fatness;
                 const p = (s * 2) / 8;
-                ctx.fillStyle = "#356e31";
+                ctx.fillStyle = z.fatness > 1 ? "#4a8a44" : "#356e31";
                 ctx.fillRect(-s, -s, s * 2, s * 2);
                 ctx.fillStyle = "#1e421b";
                 ctx.fillRect(-s, -s, s * 2, p);
@@ -378,7 +479,15 @@
                 ctx.fillRect(-s + p * 2, -s + p * 1, p, p * 3);
                 ctx.fillRect(-s + p * 4, -s + p * 1, p, p * 3);
                 ctx.restore();
+                if (z.hp < z.maxHp) {
+                    const w = z.size * 2;
+                    ctx.fillStyle = "#400";
+                    ctx.fillRect(z.x - w/2, z.y - z.size * z.fatness - 8, w, 4);
+                    ctx.fillStyle = "#0f0";
+                    ctx.fillRect(z.x - w/2, z.y - z.size * z.fatness - 8, w * (z.hp / z.maxHp), 4);
+                }
             });
+
             const timeSinceLastShot = performance.now() - lastShootTime;
             if (timeSinceLastShot < shootCooldown) {
                 const progress = timeSinceLastShot / shootCooldown;
@@ -395,11 +504,15 @@
         function resetGame() {
             player = { x: 400, y: 300, size: 20, speed: 4, angle: 0, maxHp: 100, hp: 100 };
             bullets = []; zombies = []; foodCans = 0; currentWave = 0;
-            lastShootTime = 0; shootCooldown = 500; bulletSize = 4;
+            lastShootTime = 0; bulletSize = 4;
             gameOver = false; isShopOpen = false; waveState = "READY_TO_START";
+            ownedWeapons = { pistol: true, shotgun: false, glizzy: false, water: false };
+            currentWeapon = "pistol";
+            shootCooldown = WEAPONS.pistol.cooldown;
             foodCansEl.innerText = foodCans;
             waveEl.innerText = 0;
             updateHealthBar();
+            updateWeaponDisplay();
             gameoverEl.style.display = "none";
             waveBanner.style.opacity = "0";
             shopUiEl.classList.remove("active");
@@ -416,6 +529,7 @@
             closeCheatMenu();
         }
 
+        updateWeaponDisplay();
         requestAnimationFrame(loop);
     </script>
 </body>
