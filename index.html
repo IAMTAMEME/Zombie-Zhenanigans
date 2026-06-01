@@ -249,7 +249,7 @@
             setTimeout(() => {
                 if (gameOver) return;
                 waveBanner.style.opacity = "0";
-                let zombieCount = currentWave * 3;
+                let zombieCount = currentWave + 2;
                 for (let i = 0; i < zombieCount; i++) spawnZombie();
                 waveState = "FIGHTING";
             }, 2000);
