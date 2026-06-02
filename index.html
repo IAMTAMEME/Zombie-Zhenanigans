@@ -158,7 +158,7 @@ function shoot(){
 function spawnWave(){
     wave++;
 
-    let zombieCount = Math.floor(wave * 1.2) + (wave > 1 ? 1 : 0);
+    let zombieCount = Math.floor(wave * 1.5) + 2; // NORMAL MODE
 
     for(let i=0;i<zombieCount;i++){
         zombies.push({
