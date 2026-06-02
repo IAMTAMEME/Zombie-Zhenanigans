@@ -211,7 +211,7 @@
             const baseAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
             if (currentWeapon === "pistol") {
-                bullets.push(makeBullet(baseAngle, { damage: 2.5, size: bulletSize, color: "#ffcc00" }));
+                bullets.push(makeBullet(baseAngle, { damage: 2, size: bulletSize, color: "#ffcc00" }));
             } else if (currentWeapon === "shotgun") {
                 const spread = 0.22;
                 for (let i = -1; i <= 1; i++) {
